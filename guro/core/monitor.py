@@ -16,6 +16,8 @@ from rich import box
 import keyboard
 import sys
 import select
+import matplotlib.pyplot as plt
+import numpy as np
 
 class InputHandler:
     def __init__(self):
@@ -251,6 +253,11 @@ class SystemMonitor:
         self.collector_thread = threading.Thread(target=self._collect_data)
         self.collector_thread.daemon = True
         self.input_handler = InputHandler()
+        self.metrics = {
+            'cpu_usage': [],
+            'memory_usage': [],
+            'timestamps': []
+        }
 
     def _collect_data(self):
         while self.running:
@@ -311,6 +318,46 @@ class SystemMonitor:
             'swap_used': swap.used,
             'swap_percent': swap.percent
         }
+
+    def discover_devices(self):
+        system_info = {
+            'os': platform.system() + ' ' + platform.release(),
+            'cpu': platform.processor(),
+            'memory': f"{round(psutil.virtual_memory().total / (1024**3), 2)} GB",
+            'gpus': GPUDetector.get_all_gpus()['gpus'] if GPUDetector.get_all_gpus()['available'] else "No GPU detected"
+        }
+        return system_info
+
+    def collect_metrics(self, duration=30):
+        self.console.print(Panel.fit(
+            "[bold yellow]Running performance test for 30 seconds...[/bold yellow]",
+            box=box.ROUNDED
+        ))
+        
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            self.metrics['cpu_usage'].append(psutil.cpu_percent())
+            self.metrics['memory_usage'].append(psutil.virtual_memory().percent)
+            self.metrics['timestamps'].append(time.time() - start_time)
+            time.sleep(1)
+
+    def plot_metrics(self):
+        plt.figure(figsize=(12, 6))
+        
+        plt.subplot(1, 2, 1)
+        plt.plot(self.metrics['timestamps'], self.metrics['cpu_usage'])
+        plt.title('CPU Usage Over Time')
+        plt.xlabel('Time (s)')
+        plt.ylabel('CPU Usage (%)')
+        
+        plt.subplot(1, 2, 2)
+        plt.plot(self.metrics['timestamps'], self.metrics['memory_usage'])
+        plt.title('Memory Usage Over Time')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Memory Usage (%)')
+        
+        plt.tight_layout()
+        plt.savefig('system_metrics.png')
 
     def display_system_info(self):
         if not self.collector_thread.is_alive():
@@ -399,6 +446,48 @@ class SystemMonitor:
             except KeyboardInterrupt:
                 self.running = False
                 break
+
+        # Device Discovery
+        system_info = self.discover_devices()
+        
+        # Display System Information
+        sys_table = Table(title="System Information", show_header=True, header_style="bold magenta")
+        sys_table.add_column("Component", style="cyan")
+        sys_table.add_column("Details", style="green")
+        
+        for key, value in system_info.items():
+            sys_table.add_row(key.capitalize(), str(value))
+        
+        self.console.print(sys_table)
+        
+        # Collect metrics
+        self.collect_metrics()
+        
+        # Plot metrics
+        self.plot_metrics()
+        
+        # Display Summary
+        summary_table = Table(title="Performance Summary", show_header=True, header_style="bold magenta")
+        summary_table.add_column("Metric", style="cyan")
+        summary_table.add_column("Average", style="green")
+        summary_table.add_column("Max", style="red")
+        
+        summary_table.add_row(
+            "CPU Usage",
+            f"{np.mean(self.metrics['cpu_usage']):.1f}%",
+            f"{max(self.metrics['cpu_usage']):.1f}%"
+        )
+        summary_table.add_row(
+            "Memory Usage",
+            f"{np.mean(self.metrics['memory_usage']):.1f}%",
+            f"{max(self.metrics['memory_usage']):.1f}%"
+        )
+        
+        self.console.print(summary_table)
+        self.console.print(Panel.fit(
+            "[bold green]Test completed! Results saved in 'system_metrics.png'[/bold green]",
+            box=box.ROUNDED
+        ))
 
 if __name__ == "__main__":
     monitor = SystemMonitor()
