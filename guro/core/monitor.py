@@ -12,6 +12,41 @@ import threading
 import subprocess
 from typing import Dict, List, Optional
 import shutil
+from rich import box
+import keyboard
+import sys
+import select
+
+class InputHandler:
+    def __init__(self):
+        self.should_exit = False
+        self._thread = None
+
+    def start(self):
+        if os.name == 'nt':  # Windows
+            self._thread = threading.Thread(target=self._windows_input)
+        else:  # Unix-like systems
+            self._thread = threading.Thread(target=self._unix_input)
+        self._thread.daemon = True
+        self._thread.start()
+
+    def _windows_input(self):
+        try:
+            while not self.should_exit:
+                if keyboard.is_pressed('q'):
+                    self.should_exit = True
+        except:
+            pass
+
+    def _unix_input(self):
+        try:
+            while not self.should_exit:
+                if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                    line = sys.stdin.readline()
+                    if line.strip().lower() == 'q':
+                        self.should_exit = True
+        except:
+            pass
 
 class GPUDetector:
     @staticmethod
@@ -215,6 +250,7 @@ class SystemMonitor:
         self.running = True
         self.collector_thread = threading.Thread(target=self._collect_data)
         self.collector_thread.daemon = True
+        self.input_handler = InputHandler()
 
     def _collect_data(self):
         while self.running:
@@ -280,7 +316,15 @@ class SystemMonitor:
         if not self.collector_thread.is_alive():
             self.collector_thread.start()
 
-        while True:
+        # Initial instruction message
+        self.console.print(Panel.fit(
+            "[bold yellow]Press 'q' and Enter to exit (or just 'q' on Windows)[/bold yellow]",
+            box=box.ROUNDED
+        ))
+
+        self.input_handler.start()
+
+        while self.running:
             try:
                 self.console.clear()
                 
@@ -319,6 +363,11 @@ class SystemMonitor:
                             gpu_table.add_row(f"Power Usage", f"{gpu['power_draw']:.2f} W")
                         if gpu.get('fan_speed'):
                             gpu_table.add_row(f"Fan Speed", f"{gpu['fan_speed']}%")
+                else:
+                    self.console.print(Panel.fit(
+                        "[bold red]GPU not available/found in this system[/bold red]",
+                        box=box.ROUNDED
+                    ))
 
                 # Thread Information
                 thread_table = Table(title="Top Processes by Thread Count", show_header=True, header_style="bold magenta")
@@ -339,8 +388,13 @@ class SystemMonitor:
                     self.console.print(Panel.fit(gpu_table))
                 self.console.print(Panel.fit(thread_table))
 
-                # Sleep for update interval
-                time.sleep(2)
+                # Check for 'q' key press
+                if self.input_handler.should_exit:
+                    self.running = False
+                    break
+
+                # Sleep for 1 minute
+                time.sleep(60)
                 
             except KeyboardInterrupt:
                 self.running = False
