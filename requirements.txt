@@ -1,0 +1,4 @@
+# requirements.txt
+click>=8.0.0
+rich>=10.0.0
+psutil>=5.8.0
