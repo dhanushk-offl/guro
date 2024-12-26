@@ -21,7 +21,8 @@ setup(
         'tabulate>=0.8.9',
         'py-cpuinfo>=8.0.0',
         'distro>=1.7.0',
-        'setproctitle>=1.2.2'
+        'setproctitle>=1.2.2',
+        'keyboard>=0.13.5'
     ],
     entry_points={
         'console_scripts': [
