@@ -16,7 +16,7 @@ def cli():
 def monitor():
     """Monitor system resources and performance"""
     monitor = SystemMonitor()
-    monitor.display_system_info()
+    monitor.run_performance_test()
 
 @cli.command()
 def optimize():
