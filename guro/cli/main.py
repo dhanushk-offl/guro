@@ -111,23 +111,15 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             border_style="red"
         ))
 @cli.command()
-@click.option('--gpu', default=True, help='Show GPU temperatures')
-@click.option('--cpu', default=True, help='Show CPU temperatures')
 @click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
 @click.option('--duration', '-d', default=None, type=int, help='Duration to run in seconds')
-def heatmap(gpu: bool, cpu: bool, interval: float, duration: Optional[int]):
-    """🌡️ Display real-time system temperature heatmap"""
+def heatmap(interval: float, duration: Optional[int]):
+    """🌡️ Display unified system temperature heatmap"""
     try:
-        if not cpu and not gpu:
-            console.print("[red]Error: At least one of --cpu or --gpu must be enabled[/red]")
-            return
-
         heatmap = SystemHeatmap()
         
-        with console.status("[bold green]Initializing heatmap visualization..."):
+        with console.status("[bold green]Initializing system heatmap..."):
             heatmap.run(
-                show_cpu=cpu,
-                show_gpu=gpu,
                 interval=interval,
                 duration=duration
             )
@@ -135,6 +127,7 @@ def heatmap(gpu: bool, cpu: bool, interval: float, duration: Optional[int]):
         console.print("\n[yellow]Heatmap visualization stopped by user[/yellow]")
     except Exception as e:
         console.print(f"[red]Error during heatmap visualization: {str(e)}[/red]")
+
 
 @cli.command(name='list')
 def list_features():
@@ -148,7 +141,7 @@ def list_features():
         "monitor": ("📊 Real-time system monitoring", "-i/--interval, -d/--duration, -e/--export"),
         "optimize": ("⚡ System performance optimization", "-a/--aggressive, -s/--silent"),
         "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only"),
-        "heatmap": ("🌡️ Hardware Heatmap Analysis", "--gpu, --cpu, -i/--interval, -d/--duration"),
+        "heatmap": ("🌡️ Hardware Heatmap Analysis", "-i/--interval, -d/--duration"),
         "about": ("ℹ️  About Guro", "None"),
         "list": ("📋 List all commands", "None")
     }
