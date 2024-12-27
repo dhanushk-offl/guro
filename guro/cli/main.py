@@ -82,7 +82,7 @@ def optimize(aggressive: bool, silent: bool):
               help='Type of benchmark test to run')
 @click.option('--gpu-only', is_flag=True, help='Run only GPU benchmark')
 @click.option('--cpu-only', is_flag=True, help='Run only CPU benchmark')
-def benchmark(test_type: str, gpu_only: bool, cpu_only: bool, export: bool):
+def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
     """🔥 Run system benchmarks"""
     try:
         benchmark = SafeSystemBenchmark()
@@ -121,7 +121,7 @@ def list_features():
     commands = {
         "monitor": ("📊 Real-time system monitoring", "-i/--interval, -d/--duration, -e/--export"),
         "optimize": ("⚡ System performance optimization", "-a/--aggressive, -s/--silent"),
-        "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only, -e/--export"),
+        "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only"),
         "about": ("ℹ️  About Guro", "None"),
         "list": ("📋 List all commands", "None")
     }
