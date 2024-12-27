@@ -10,6 +10,22 @@ import json
 import time
 from datetime import datetime
 
+console = Console()
+
+def show_sudo_warning():
+    """Display warning about sudo usage"""
+    console.print(Panel.fit(
+        "[bold red]⚠️  WARNING: Sudo Required[/bold red]\n\n"
+        "This command must be run with sudo privileges.\n"
+        "Please use: [bold white]sudo guro optimize[/bold white] instead of direct command.\n\n"
+        "Example usage:\n"
+        "✓ [green]sudo guro optimize --aggressive[/green]\n"
+        "✓ [green]sudo guro optimize --silent[/green]\n"
+        "✗ [red]guro optimize[/red]\n",
+        title="🔐 Sudo Required",
+        border_style="red"
+    ))
+
 class PermissionChecker:
     @staticmethod
     def is_root() -> bool:
@@ -216,7 +232,7 @@ class SystemOptimizer:
             self.console.print(f"[red]Error optimizing GPU: {str(e)}[/red]")
             return False
 
-    def optimize_cpu(self):
+    def optimize_cpu(self, aggressive: bool = False):
         try:
             optimization_results = {
                 "type": "CPU",
@@ -231,33 +247,34 @@ class SystemOptimizer:
                     "error": "Root permissions required"
                 })
             else:
-                try:
-                    subprocess.run(['cpupower', 'frequency-set', '-g', 'performance'], check=True)
-                    optimization_results["optimizations"].append({
-                        "action": "Set CPU governor",
-                        "status": "success"
-                    })
-                except Exception as e:
-                    optimization_results["optimizations"].append({
-                        "action": "Set CPU governor",
-                        "status": "failed",
-                        "error": str(e)
-                    })
+                # Standard optimizations
+                commands = [
+                    (['cpupower', 'frequency-set', '-g', 'performance'], "Set CPU governor"),
+                    (['sysctl', '-w', 'kernel.sched_min_granularity_ns=10000000'], "Optimize CPU scheduler")
+                ]
+                
+                # Add aggressive optimizations if enabled
+                if aggressive:
+                    commands.extend([
+                        (['sysctl', '-w', 'kernel.sched_migration_cost_ns=5000000'], "Aggressive scheduler tuning"),
+                        (['sysctl', '-w', 'kernel.sched_autogroup_enabled=0'], "Disable autogroup"),
+                        (['sysctl', '-w', 'kernel.sched_latency_ns=5000000'], "Minimize scheduling latency")
+                    ])
 
-                try:
-                    subprocess.run(['sysctl', '-w', 'kernel.sched_min_granularity_ns=10000000'], check=True)
-                    subprocess.run(['sysctl', '-w', 'kernel.sched_wakeup_granularity_ns=15000000'], check=True)
-                    optimization_results["optimizations"].append({
-                        "action": "Optimize CPU scheduler",
-                        "status": "success"
-                    })
-                except Exception as e:
-                    optimization_results["optimizations"].append({
-                        "action": "Optimize CPU scheduler",
-                        "status": "failed",
-                        "error": str(e)
-                    })
-            
+                for cmd, action in commands:
+                    try:
+                        subprocess.run(cmd, check=True)
+                        optimization_results["optimizations"].append({
+                            "action": action,
+                            "status": "success"
+                        })
+                    except Exception as e:
+                        optimization_results["optimizations"].append({
+                            "action": action,
+                            "status": "failed",
+                            "error": str(e)
+                        })
+
             self.optimization_history.append(optimization_results)
             self.console.print(Panel.fit(self.create_status_table(optimization_results)))
             return True

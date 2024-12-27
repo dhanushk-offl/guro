@@ -13,6 +13,8 @@ import subprocess
 from typing import Dict, List, Optional
 import shutil
 from rich import box
+import click
+import csv
 
 class GPUDetector:
     @staticmethod
@@ -138,6 +140,7 @@ class SystemMonitor:
         self.console = Console()
         self.cpu_graph = ASCIIGraph()
         self.memory_graph = ASCIIGraph()
+        self.monitoring_data = []
         
     def _get_cpu_temperature(self):
         if platform.system() == 'Linux':
@@ -170,11 +173,23 @@ class SystemMonitor:
             
         return system_info
 
-    def run_performance_test(self, duration=30):
+    def export_monitoring_data(self):
+        if not self.monitoring_data:
+            return
+        
+        with open('monitoring_data.csv', 'w', newline='') as csvfile:
+            fieldnames = ['timestamp', 'cpu_usage', 'memory_usage']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            
+            writer.writeheader()
+            for data in self.monitoring_data:
+                writer.writerow(data)
+
+    def run_performance_test(self, interval: float = 1.0, duration: Optional[int] = 30, export_data: bool = False):
         self.console.clear()
         self.console.print(Panel.fit(
             "[bold cyan]Welcome to System Performance Monitor[/bold cyan]\n" +
-            "[yellow]Running 30-second performance test...[/yellow]",
+            f"[yellow]Running performance test for {duration if duration else 'unlimited'} seconds...[/yellow]",
             box=box.DOUBLE
         ))
         
@@ -210,24 +225,39 @@ class SystemMonitor:
         
         # Performance Test
         start_time = time.time()
-        while time.time() - start_time < duration:
-            cpu_percent = psutil.cpu_percent()
-            memory_percent = psutil.virtual_memory().percent
-            
-            self.cpu_graph.add_point(cpu_percent)
-            self.memory_graph.add_point(memory_percent)
-            
-            self.console.clear()
-            self.console.print(Panel.fit(
-                f"[bold cyan]Performance Test Progress: {int(time.time() - start_time)}/{duration}s[/bold cyan]",
-                box=box.DOUBLE
-            ))
-            
-            self.console.print(self.cpu_graph.render(f"CPU Usage: {cpu_percent:.1f}%"))
-            self.console.print("")
-            self.console.print(self.memory_graph.render(f"Memory Usage: {memory_percent:.1f}%"))
-            
-            time.sleep(1)
+        try:
+            while True:
+                current_time = time.time()
+                if duration and (current_time - start_time >= duration):
+                    break
+                
+                cpu_percent = psutil.cpu_percent()
+                memory_percent = psutil.virtual_memory().percent
+                
+                self.cpu_graph.add_point(cpu_percent)
+                self.memory_graph.add_point(memory_percent)
+                
+                if export_data:
+                    self.monitoring_data.append({
+                        'timestamp': datetime.datetime.now().isoformat(),
+                        'cpu_usage': cpu_percent,
+                        'memory_usage': memory_percent
+                    })
+                
+                self.console.clear()
+                self.console.print(Panel.fit(
+                    f"[bold cyan]Performance Test Progress: {int(current_time - start_time)}s{f'/{duration}s' if duration else ''}[/bold cyan]",
+                    box=box.DOUBLE
+                ))
+                
+                self.console.print(self.cpu_graph.render(f"CPU Usage: {cpu_percent:.1f}%"))
+                self.console.print("")
+                self.console.print(self.memory_graph.render(f"Memory Usage: {memory_percent:.1f}%"))
+                
+                time.sleep(interval)
+        
+        except KeyboardInterrupt:
+            self.console.print("\n[yellow]Monitoring stopped by user[/yellow]")
         
         # Final Summary
         self.console.clear()
@@ -239,16 +269,18 @@ class SystemMonitor:
         cpu_values = list(self.cpu_graph.data)
         mem_values = list(self.memory_graph.data)
         
-        summary_table.add_row(
-            "CPU Usage",
-            f"{sum(cpu_values) / len(cpu_values):.1f}%",
-            f"{max(cpu_values):.1f}%"
-        )
-        summary_table.add_row(
-            "Memory Usage",
-            f"{sum(mem_values) / len(mem_values):.1f}%",
-            f"{max(mem_values):.1f}%"
-        )
+        if cpu_values:
+            summary_table.add_row(
+                "CPU Usage",
+                f"{sum(cpu_values) / len(cpu_values):.1f}%",
+                f"{max(cpu_values):.1f}%"
+            )
+        if mem_values:
+            summary_table.add_row(
+                "Memory Usage",
+                f"{sum(mem_values) / len(mem_values):.1f}%",
+                f"{max(mem_values):.1f}%"
+            )
         
         self.console.print(Panel.fit(
             "[bold green]Performance Test Completed![/bold green]",
@@ -260,10 +292,15 @@ class SystemMonitor:
         self.console.print(self.cpu_graph.render("CPU Usage History"))
         self.console.print("")
         self.console.print(self.memory_graph.render("Memory Usage History"))
+        
+        if export_data:
+            self.export_monitoring_data()
+            self.console.print("\n[green]Monitoring data exported to 'monitoring_data.csv'[/green]")
 
-if __name__ == "__main__":
-    monitor = SystemMonitor()
-    monitor.run_performance_test()
+@click.group()
+def cli():
+    """🖥️ System Performance Monitor CLI"""
+    pass
 # import psutil
 # import platform
 # import datetime
