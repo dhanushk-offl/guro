@@ -1,4 +1,3 @@
-# system_monitor.py
 import time
 import psutil
 import platform
@@ -11,30 +10,33 @@ from rich.text import Text
 import subprocess
 from pathlib import Path
 import ctypes
-from ctypes import windll, wintypes, byref, Structure, POINTER
+from ctypes import Structure
 import click
 import os
 
-# Windows API structures
-class SYSTEM_POWER_STATUS(Structure):
-    _fields_ = [
-        ('ACLineStatus', wintypes.BYTE),
-        ('BatteryFlag', wintypes.BYTE),
-        ('BatteryLifePercent', wintypes.BYTE),
-        ('SystemStatusFlag', wintypes.BYTE),
-        ('BatteryLifeTime', wintypes.DWORD),
-        ('BatteryFullLifeTime', wintypes.DWORD),
-    ]
+# Import platform-specific modules
+if platform.system() == "Windows":
+    from ctypes import windll, wintypes, byref, POINTER
+    
+    class SYSTEM_POWER_STATUS(Structure):
+        _fields_ = [
+            ('ACLineStatus', wintypes.BYTE),
+            ('BatteryFlag', wintypes.BYTE),
+            ('BatteryLifePercent', wintypes.BYTE),
+            ('SystemStatusFlag', wintypes.BYTE),
+            ('BatteryLifeTime', wintypes.DWORD),
+            ('BatteryFullLifeTime', wintypes.DWORD),
+        ]
 
-class PROCESSOR_POWER_INFORMATION(Structure):
-    _fields_ = [
-        ("CurrentFrequency", wintypes.ULONG),
-        ("MaxMhz", wintypes.ULONG),
-        ("CurrentMhz", wintypes.ULONG),
-        ("MhzLimit", wintypes.ULONG),
-        ("MaxIdleState", wintypes.ULONG),
-        ("CurrentIdleState", wintypes.ULONG),
-    ]
+    class PROCESSOR_POWER_INFORMATION(Structure):
+        _fields_ = [
+            ("CurrentFrequency", wintypes.ULONG),
+            ("MaxMhz", wintypes.ULONG),
+            ("CurrentMhz", wintypes.ULONG),
+            ("MhzLimit", wintypes.ULONG),
+            ("MaxIdleState", wintypes.ULONG),
+            ("CurrentIdleState", wintypes.ULONG),
+        ]
 
 class SystemHeatmap:
     def __init__(self):
@@ -53,11 +55,12 @@ class SystemHeatmap:
             self.setup_windows_api()
 
     def setup_windows_api(self):
-        self.GetSystemPowerStatus = windll.kernel32.GetSystemPowerStatus
-        self.GetSystemPowerStatus.argtypes = [POINTER(SYSTEM_POWER_STATUS)]
-        self.GetSystemPowerStatus.restype = wintypes.BOOL
-        self.NtQuerySystemInformation = windll.ntdll.NtQuerySystemInformation
-        self.CallNtPowerInformation = windll.powrprof.CallNtPowerInformation
+        if platform.system() == "Windows":
+            self.GetSystemPowerStatus = windll.kernel32.GetSystemPowerStatus
+            self.GetSystemPowerStatus.argtypes = [POINTER(SYSTEM_POWER_STATUS)]
+            self.GetSystemPowerStatus.restype = wintypes.BOOL
+            self.NtQuerySystemInformation = windll.ntdll.NtQuerySystemInformation
+            self.CallNtPowerInformation = windll.powrprof.CallNtPowerInformation
 
     def initialize_temp_maps(self):
         self.temp_maps = {
@@ -66,6 +69,9 @@ class SystemHeatmap:
         }
 
     def get_windows_temps(self) -> Dict[str, float]:
+        if platform.system() != "Windows":
+            return self.get_fallback_temps()
+            
         return {
             'CPU': self.get_windows_cpu_temp(),
             'GPU': self.get_windows_gpu_temp(),
@@ -75,6 +81,9 @@ class SystemHeatmap:
         }
 
     def get_windows_cpu_temp(self) -> float:
+        if platform.system() != "Windows":
+            return self.get_cpu_load_temp()
+            
         try:
             buffer_size = ctypes.sizeof(PROCESSOR_POWER_INFORMATION)
             buffer = ctypes.create_string_buffer(buffer_size)
@@ -86,6 +95,9 @@ class SystemHeatmap:
             return self.get_cpu_load_temp()
 
     def get_windows_gpu_temp(self) -> float:
+        if platform.system() != "Windows":
+            return self.get_gpu_load_temp()
+            
         try:
             if hasattr(windll, 'd3d11'):
                 device = ctypes.c_void_p()
@@ -97,6 +109,9 @@ class SystemHeatmap:
             return self.get_gpu_load_temp()
 
     def get_windows_motherboard_temp(self) -> float:
+        if platform.system() != "Windows":
+            return 45.0
+            
         try:
             status = SYSTEM_POWER_STATUS()
             if self.GetSystemPowerStatus(byref(status)):
@@ -106,18 +121,22 @@ class SystemHeatmap:
             return 45.0
 
     def get_windows_storage_temp(self) -> float:
+        if platform.system() != "Windows":
+            return 35.0
+            
         try:
-            hDevice = windll.kernel32.CreateFileW(
-                "\\\\.\\PhysicalDrive0", 
-                0x80000000,
-                0x3,
-                None,
-                3,
-                0,
-                None
-            )
-            if hDevice != -1:
-                return self.get_disk_load_temp()
+            if hasattr(windll, 'kernel32'):
+                hDevice = windll.kernel32.CreateFileW(
+                    "\\\\.\\PhysicalDrive0", 
+                    0x80000000,
+                    0x3,
+                    None,
+                    3,
+                    0,
+                    None
+                )
+                if hDevice != -1:
+                    return self.get_disk_load_temp()
             return 35.0
         except:
             return 35.0
@@ -314,7 +333,6 @@ class SystemHeatmap:
             except KeyboardInterrupt:
                 pass
 
-# CLI implementation
 console = Console()
 
 @click.group()
@@ -328,7 +346,8 @@ def cli():
 def heatmap(interval: float, duration: Optional[int]):
     """🌡️ Display unified system temperature heatmap"""
     try:
-        if os.geteuid() == 0 or platform.system() == "Windows":
+        current_system = platform.system()
+        if current_system == "Windows" or (current_system in ["Linux", "Darwin"] and os.geteuid() == 0):
             heatmap = SystemHeatmap()
             with console.status("[bold green]Initializing system heatmap..."):
                 heatmap.run(interval=interval, duration=duration)
