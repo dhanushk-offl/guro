@@ -13,6 +13,12 @@ from threading import Thread
 import signal
 import sys
 
+try:
+    import GPUtil
+    HAS_GPU_STATS = True
+except ImportError:
+    HAS_GPU_STATS = False
+
 class SafeSystemBenchmark:
     def __init__(self):
         self.console = Console()
@@ -26,6 +32,27 @@ class SafeSystemBenchmark:
         # Safety thresholds
         self.MAX_CPU_USAGE = 80  # Maximum CPU usage percentage
         self.MAX_MEMORY_USAGE = 80  # Maximum memory usage percentage
+        self.has_gpu = self._check_gpu()
+        
+    def _check_gpu(self):
+        """Check if GPU is available and get GPU information"""
+        gpu_info = {'available': False, 'info': None}
+        
+        if HAS_GPU_STATS:
+            try:
+                gpus = GPUtil.getGPUs()
+                if gpus and len(gpus) > 0:
+                    gpu = gpus[0]  # Get first GPU info
+                    gpu_info['available'] = True
+                    gpu_info['info'] = {
+                        'name': gpu.name,
+                        'count': len(gpus),
+                        'memory_total': gpu.memoryTotal,
+                        'driver_version': gpu.driver
+                    }
+            except Exception:
+                pass
+        return gpu_info
         
     def get_system_info(self):
         """Get basic system information safely"""
@@ -34,9 +61,38 @@ class SafeSystemBenchmark:
             'processor': platform.processor(),
             'memory_total': psutil.virtual_memory().total,
             'cpu_cores': psutil.cpu_count(logical=False),
-            'cpu_threads': psutil.cpu_count(logical=True)
+            'cpu_threads': psutil.cpu_count(logical=True),
+            'gpu': self.has_gpu
         }
         return info
+
+    def safe_gpu_test(self, duration):
+        """Safe GPU benchmark with controlled load"""
+        if not self.has_gpu['available']:
+            return {'times': [], 'loads': [], 'error': 'No GPU available'}
+            
+        result = {'times': [], 'loads': [], 'memory_usage': []}
+        start_time = time.time()
+        
+        try:
+            while time.time() - start_time < duration and self.running:
+                if HAS_GPU_STATS:
+                    gpus = GPUtil.getGPUs()
+                    if gpus and len(gpus) > 0:
+                        gpu = gpus[0]
+                        gpu_load = gpu.load * 100
+                        gpu_memory = gpu.memoryUsed
+                        
+                        result['times'].append(time.time() - start_time)
+                        result['loads'].append(gpu_load)
+                        result['memory_usage'].append(gpu_memory)
+                
+                time.sleep(0.1)
+                    
+        except Exception as e:
+            result['error'] = str(e)
+            
+        return result
 
     def monitor_resources(self):
         """Monitor system resources in real-time"""
@@ -82,7 +138,7 @@ class SafeSystemBenchmark:
             
         return result
 
-    def mini_test(self):
+    def mini_test(self, gpu_only=False, cpu_only=False):
         """Run 30-second mini benchmark"""
         self.running = True
         duration = 30
@@ -92,18 +148,20 @@ class SafeSystemBenchmark:
         monitor_thread.start()
         
         with Live(self.generate_status_table(), refresh_per_second=4) as live:
-            # CPU Test
-            cpu_results = self.safe_cpu_test(duration/2)
-            
-            # Memory Test
-            memory_results = self.safe_memory_test(duration/2)
-            
             self.results = {
-                'cpu': cpu_results,
-                'memory': memory_results,
-                'duration': duration,
-                'system_info': self.get_system_info()
+                'system_info': self.get_system_info(),
+                'duration': duration
             }
+            
+            if not gpu_only:
+                # CPU Test
+                self.results['cpu'] = self.safe_cpu_test(duration/2)
+                # Memory Test
+                self.results['memory'] = self.safe_memory_test(duration/2)
+                
+            if not cpu_only and self.has_gpu['available']:
+                # GPU Test
+                self.results['gpu'] = self.safe_gpu_test(duration/2)
             
             live.update(self.generate_status_table())
         
@@ -111,7 +169,7 @@ class SafeSystemBenchmark:
         monitor_thread.join()
         self.display_results("Mini-Test")
 
-    def god_test(self):
+    def god_test(self, gpu_only=False, cpu_only=False):
         """Run 120-second comprehensive benchmark"""
         self.running = True
         duration = 120
@@ -121,18 +179,20 @@ class SafeSystemBenchmark:
         monitor_thread.start()
         
         with Live(self.generate_status_table(), refresh_per_second=4) as live:
-            # Extended CPU Test
-            cpu_results = self.safe_cpu_test(duration/2)
-            
-            # Extended Memory Test with different patterns
-            memory_results = self.safe_memory_test(duration/2)
-            
             self.results = {
-                'cpu': cpu_results,
-                'memory': memory_results,
-                'duration': duration,
-                'system_info': self.get_system_info()
+                'system_info': self.get_system_info(),
+                'duration': duration
             }
+            
+            if not gpu_only:
+                # Extended CPU Test
+                self.results['cpu'] = self.safe_cpu_test(duration/2)
+                # Extended Memory Test
+                self.results['memory'] = self.safe_memory_test(duration/2)
+                
+            if not cpu_only and self.has_gpu['available']:
+                # Extended GPU Test
+                self.results['gpu'] = self.safe_gpu_test(duration/2)
             
             live.update(self.generate_status_table())
         
@@ -151,6 +211,15 @@ class SafeSystemBenchmark:
         
         table.add_row("CPU Usage", f"{cpu_percent}%")
         table.add_row("Memory Usage", f"{memory_percent}%")
+        
+        if self.has_gpu['available'] and HAS_GPU_STATS:
+            gpus = GPUtil.getGPUs()
+            if gpus and len(gpus) > 0:
+                gpu = gpus[0]
+                table.add_row("GPU", f"[green]{gpu.name}[/green]")
+                table.add_row("GPU Usage", f"{gpu.load * 100}%")
+                table.add_row("GPU Memory", f"{gpu.memoryUsed} MB / {gpu.memoryTotal} MB")
+                
         table.add_row("Status", "[green]Running[/green]" if self.running else "[red]Stopped[/red]")
         
         return table
@@ -168,14 +237,42 @@ class SafeSystemBenchmark:
         result_text += f"• System: {sys_info['system']}\n"
         result_text += f"• Processor: {sys_info['processor']}\n"
         result_text += f"• CPU Cores: {sys_info['cpu_cores']}\n"
-        result_text += f"• CPU Threads: {sys_info['cpu_threads']}\n\n"
+        result_text += f"• CPU Threads: {sys_info['cpu_threads']}\n"
         
-        # Performance Results
-        result_text += "[green]Performance Results:[/green]\n"
-        result_text += f"• Average CPU Load: {np.mean(self.results['cpu']['loads']):.2f}%\n"
-        result_text += f"• Peak CPU Load: {max(self.results['cpu']['loads']):.2f}%\n"
-        result_text += f"• Average Memory Usage: {np.mean(self.results['memory']['usage']):.2f}%\n"
-        result_text += f"• Peak Memory Usage: {max(self.results['memory']['usage']):.2f}%\n"
+        # GPU Information
+        if sys_info['gpu']['available']:
+            gpu_info = sys_info['gpu']['info']
+            result_text += f"• GPU: {gpu_info['name']}\n"
+            result_text += f"• GPU Count: {gpu_info['count']}\n"
+            result_text += f"• GPU Memory: {gpu_info['memory_total']} MB\n"
+            result_text += f"• Driver Version: {gpu_info['driver_version']}\n"
+        else:
+            result_text += "• GPU: Not Available\n"
+        
+        result_text += "\n[green]Performance Results:[/green]\n"
+        
+        # CPU Results
+        if 'cpu' in self.results:
+            result_text += f"• Average CPU Load: {np.mean(self.results['cpu']['loads']):.2f}%\n"
+            result_text += f"• Peak CPU Load: {max(self.results['cpu']['loads']):.2f}%\n"
+            
+        # Memory Results
+        if 'memory' in self.results:
+            result_text += f"• Average Memory Usage: {np.mean(self.results['memory']['usage']):.2f}%\n"
+            result_text += f"• Peak Memory Usage: {max(self.results['memory']['usage']):.2f}%\n"
+            
+        # GPU Results
+        if 'gpu' in self.results and 'error' not in self.results['gpu']:
+            loads = self.results['gpu']['loads']
+            if loads:
+                result_text += f"• Average GPU Load: {np.mean(loads):.2f}%\n"
+                result_text += f"• Peak GPU Load: {max(loads):.2f}%\n"
+                if 'memory_usage' in self.results['gpu']:
+                    mem_usage = self.results['gpu']['memory_usage']
+                    if mem_usage:
+                        result_text += f"• Average GPU Memory Usage: {np.mean(mem_usage):.2f} MB\n"
+                        result_text += f"• Peak GPU Memory Usage: {max(mem_usage):.2f} MB\n"
+                
         result_text += f"• Test Duration: {self.results['duration']} seconds\n"
 
         self.console.print(Panel(
