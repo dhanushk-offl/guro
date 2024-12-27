@@ -110,28 +110,6 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             title="⚠️ Benchmark Error",
             border_style="red"
         ))
-
-@cli.command(name='list')
-def list_features():
-    """📋 List all available features and commands"""
-    table = Table(title="Guro Commands and Features")
-    table.add_column("Command", style="cyan")
-    table.add_column("Description", style="green")
-    table.add_column("Options", style="yellow")
-
-    commands = {
-        "monitor": ("📊 Real-time system monitoring", "-i/--interval, -d/--duration, -e/--export"),
-        "optimize": ("⚡ System performance optimization", "-a/--aggressive, -s/--silent"),
-        "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only"),
-        "about": ("ℹ️  About Guro", "None"),
-        "list": ("📋 List all commands", "None")
-    }
-
-    for cmd, (desc, opts) in commands.items():
-        table.add_row(cmd, desc, opts)
-
-    console.print(table)
-
 @cli.command()
 @click.option('--gpu', default=True, help='Show GPU temperatures')
 @click.option('--cpu', default=True, help='Show CPU temperatures')
@@ -158,6 +136,29 @@ def heatmap(gpu: bool, cpu: bool, interval: float, duration: Optional[int]):
     except Exception as e:
         console.print(f"[red]Error during heatmap visualization: {str(e)}[/red]")
 
+@cli.command(name='list')
+def list_features():
+    """📋 List all available features and commands"""
+    table = Table(title="Guro Commands and Features")
+    table.add_column("Command", style="cyan")
+    table.add_column("Description", style="green")
+    table.add_column("Options", style="yellow")
+
+    commands = {
+        "monitor": ("📊 Real-time system monitoring", "-i/--interval, -d/--duration, -e/--export"),
+        "optimize": ("⚡ System performance optimization", "-a/--aggressive, -s/--silent"),
+        "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only"),
+        "heatmap": ("🌡️ Hardware Heatmap Analysis", "--gpu, --cpu, -i/--interval, -d/--duration"),
+        "about": ("ℹ️  About Guro", "None"),
+        "list": ("📋 List all commands", "None")
+    }
+
+    for cmd, (desc, opts) in commands.items():
+        table.add_row(cmd, desc, opts)
+
+    console.print(table)
+
+
 @cli.command(name='about')
 def about():
     """ℹ️  Display information about Guro"""
@@ -174,8 +175,8 @@ def about():
 • ⚡ CPU optimization
 • 💾 Memory management
 • 🧹 System cleaning
-• 💪 Performance benchmarking
-• 🔥 Hardware Heatmap Analysis
+• 🔥 Performance benchmarking
+• 🌡️ Hardware Heatmap Analysis
 • 📈 Resource tracking
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro
