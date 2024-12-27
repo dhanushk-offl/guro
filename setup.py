@@ -22,7 +22,8 @@ setup(
         'py-cpuinfo>=8.0.0',
         'distro>=1.7.0',
         'setproctitle>=1.2.2',
-        'keyboard>=0.13.5'
+        'keyboard>=0.13.5',
+        'wmi>=1.5.1'
     ],
     entry_points={
         'console_scripts': [

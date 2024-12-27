@@ -8,6 +8,7 @@ from typing import Optional
 from ..core.monitor import SystemMonitor
 from ..core.optimizer import SystemOptimizer
 from ..core.benchmark import SafeSystemBenchmark
+from ..core.heatmap import SystemHeatmap
 
 console = Console()
 
@@ -131,6 +132,32 @@ def list_features():
 
     console.print(table)
 
+@cli.command()
+@click.option('--gpu', default=True, help='Show GPU temperatures')
+@click.option('--cpu', default=True, help='Show CPU temperatures')
+@click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
+@click.option('--duration', '-d', default=None, type=int, help='Duration to run in seconds')
+def heatmap(gpu: bool, cpu: bool, interval: float, duration: Optional[int]):
+    """🌡️ Display real-time system temperature heatmap"""
+    try:
+        if not cpu and not gpu:
+            console.print("[red]Error: At least one of --cpu or --gpu must be enabled[/red]")
+            return
+
+        heatmap = SystemHeatmap()
+        
+        with console.status("[bold green]Initializing heatmap visualization..."):
+            heatmap.run(
+                show_cpu=cpu,
+                show_gpu=gpu,
+                interval=interval,
+                duration=duration
+            )
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Heatmap visualization stopped by user[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error during heatmap visualization: {str(e)}[/red]")
+
 @cli.command(name='about')
 def about():
     """ℹ️  Display information about Guro"""
@@ -147,7 +174,8 @@ def about():
 • ⚡ CPU optimization
 • 💾 Memory management
 • 🧹 System cleaning
-• 🔥 Performance benchmarking
+• 💪 Performance benchmarking
+• 🔥 Hardware Heatmap Analysis
 • 📈 Resource tracking
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro

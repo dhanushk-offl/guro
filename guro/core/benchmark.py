@@ -170,9 +170,9 @@ class SafeSystemBenchmark:
         self.display_results("Mini-Test")
 
     def god_test(self, gpu_only=False, cpu_only=False):
-        """Run 120-second comprehensive benchmark"""
+        """Running GOD - LEVEL comprehensive benchmark"""
         self.running = True
-        duration = 120
+        duration = 60
         
         # Start resource monitoring
         monitor_thread = Thread(target=self.monitor_resources)
