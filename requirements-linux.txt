@@ -1,0 +1,3 @@
+-r requirements.txt
+pyamdgpuinfo>=2.1.6
+distro>=1.7.0

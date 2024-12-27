@@ -1,29 +1,30 @@
-# setup.py
 from setuptools import setup, find_packages
+import sys
+
+common_packages = [
+    'click>=8.0.0',
+    'rich>=10.0.0',
+    'psutil>=5.8.0',
+    'gputil>=1.4.0',
+    'matplotlib>=3.5.0',
+    'nvidia-ml-py>=11.515.0',
+    'pandas>=1.3.0',
+    'plotly>=5.5.0',
+    'termcolor>=2.0.0',
+    'tabulate>=0.8.9',
+    'py-cpuinfo>=8.0.0',
+    'setproctitle>=1.2.2',
+    'keyboard>=0.13.5'
+]
+
+if sys.platform.startswith('linux'):
+    common_packages.append('pyamdgpuinfo>=2.1.6')
+    common_packages.append('distro>=1.7.0')
 
 setup(
     name="guro",
-    version="1.1.0",
     packages=find_packages(),
-    include_package_data=True,
-    install_requires=[
-        'click>=8.0.0',
-        'rich>=10.0.0',
-        'psutil>=5.8.0',
-        'py3nvml>=0.2.7',
-        'gputil>=1.4.0',
-        'matplotlib>=3.5.0',
-        'pyamdgpuinfo>=2.1.6',
-        'nvidia-ml-py>=11.515.0',
-        'pandas>=1.3.0',
-        'plotly>=5.5.0',
-        'termcolor>=2.0.0',
-        'tabulate>=0.8.9',
-        'py-cpuinfo>=8.0.0',
-        'distro>=1.7.0',
-        'setproctitle>=1.2.2',
-        'keyboard>=0.13.5'
-    ],
+    install_requires=common_packages,
     entry_points={
         'console_scripts': [
             'guro=guro.cli.main:cli',
