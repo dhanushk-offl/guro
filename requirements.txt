@@ -16,3 +16,5 @@ distro>=1.7.0
 setproctitle>=1.2.2
 keyboard>=0.13.5
 wmi>=1.5.1
+pywin32; platform_system=="Windows"
+wmi; platform_system=="Windows"
