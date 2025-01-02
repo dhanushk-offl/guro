@@ -1,7 +1,3 @@
-# Create debian/rules file
-cat > debian/rules << 'EOF'
 #!/usr/bin/make -f
 %:
 	dh $@ --with python3 --buildsystem=pybuild
-EOF
-chmod +x debian/rules

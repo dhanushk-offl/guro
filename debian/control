@@ -1,9 +1,13 @@
-Package: guro
-Version: 1.0.0
+Source: guro
 Section: utils
 Priority: optional
+Maintainer: Dhanush Kandhan <dhanushkandhan75@gmail.com>
+Build-Depends: debhelper (>= 12), python3-all, python3-setuptools
+Standards-Version: 4.5.0
+Homepage: https://github.com/dhanushk-offl/guro
+
+Package: guro
 Architecture: all
-Depends: python3 (>= 3.6), python3-pip, python3-venv
-Maintainer: Dhanush Kandhan dhanushkandhan75@gmail.com
+Depends: python3 (>= 3.6), python3-pip, python3-venv, ${misc:Depends}
 Description: Advanced System Optimization Toolkit
  Guro is a powerful system monitoring and optimization tool that provides real-time system metrics and performance tuning.
