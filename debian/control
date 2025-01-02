@@ -2,7 +2,8 @@ Source: guro
 Section: utils
 Priority: optional
 Maintainer: Dhanush Kandhan <dhanushkandhan75@gmail.com>
-Build-Depends: debhelper (>= 12), python3-all, python3-setuptools
+Build-Depends: debhelper-compat (= 12), python3-all, python3-setuptools
+Rules-Requires-Root: yes
 Standards-Version: 4.5.0
 Homepage: https://github.com/dhanushk-offl/guro
 
