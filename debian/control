@@ -6,5 +6,4 @@ Architecture: all
 Depends: python3 (>= 3.6), python3-pip, python3-venv
 Maintainer: Dhanush Kandhan dhanushkandhan75@gmail.com
 Description: Advanced System Optimization Toolkit
- Guro is a powerful system monitoring and optimization tool
- that provides real-time system metrics and performance tuning.
+ Guro is a powerful system monitoring and optimization tool that provides real-time system metrics and performance tuning.
