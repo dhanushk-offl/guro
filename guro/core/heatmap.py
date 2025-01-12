@@ -332,31 +332,3 @@ class SystemHeatmap:
                     time.sleep(interval)
             except KeyboardInterrupt:
                 pass
-
-console = Console()
-
-@click.group()
-def cli():
-    """System monitoring tools"""
-    pass
-
-@cli.command()
-@click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
-@click.option('--duration', '-d', default=None, type=int, help='Duration to run in seconds')
-def heatmap(interval: float, duration: Optional[int]):
-    """🌡️ Display unified system temperature heatmap"""
-    try:
-        current_system = platform.system()
-        if current_system == "Windows" or (current_system in ["Linux", "Darwin"] and os.geteuid() == 0):
-            heatmap = SystemHeatmap()
-            with console.status("[bold green]Initializing system heatmap..."):
-                heatmap.run(interval=interval, duration=duration)
-        else:
-            console.print("[red]Error: This script requires root privileges on Linux/macOS[/red]")
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Heatmap visualization stopped by user[/yellow]")
-    except Exception as e:
-        console.print(f"[red]Error during heatmap visualization: {str(e)}[/red]")
-
-if __name__ == '__main__':
-    cli()
