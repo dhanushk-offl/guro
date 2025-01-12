@@ -1,3 +1,4 @@
+# guro/core/benchmark.py
 import psutil
 import time
 import numpy as np
@@ -41,7 +42,7 @@ class SafeSystemBenchmark:
         if HAS_GPU_STATS:
             try:
                 gpus = GPUtil.getGPUs()
-                if gpus and len(gpus) > 0:
+                if gpus:  # Changed condition to just check if gpus exists
                     gpu = gpus[0]  # Get first GPU info
                     gpu_info['available'] = True
                     gpu_info['info'] = {
@@ -50,8 +51,8 @@ class SafeSystemBenchmark:
                         'memory_total': gpu.memoryTotal,
                         'driver_version': gpu.driver
                     }
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"GPU detection error: {e}")
         return gpu_info
         
     def get_system_info(self):
@@ -69,7 +70,7 @@ class SafeSystemBenchmark:
     def safe_gpu_test(self, duration):
         """Safe GPU benchmark with controlled load"""
         if not self.has_gpu['available']:
-            return {'times': [], 'loads': [], 'error': 'No GPU available'}
+            return {'times': [], 'loads': [], 'memory_usage': [], 'error': 'No GPU available'}
             
         result = {'times': [], 'loads': [], 'memory_usage': []}
         start_time = time.time()
@@ -78,10 +79,10 @@ class SafeSystemBenchmark:
             while time.time() - start_time < duration and self.running:
                 if HAS_GPU_STATS:
                     gpus = GPUtil.getGPUs()
-                    if gpus and len(gpus) > 0:
+                    if gpus:
                         gpu = gpus[0]
-                        gpu_load = gpu.load * 100
-                        gpu_memory = gpu.memoryUsed
+                        gpu_load = gpu.load * 100 if gpu.load is not None else 0
+                        gpu_memory = gpu.memoryUsed if gpu.memoryUsed is not None else 0
                         
                         result['times'].append(time.time() - start_time)
                         result['loads'].append(gpu_load)
@@ -214,7 +215,7 @@ class SafeSystemBenchmark:
         
         if self.has_gpu['available'] and HAS_GPU_STATS:
             gpus = GPUtil.getGPUs()
-            if gpus and len(gpus) > 0:
+            if gpus:
                 gpu = gpus[0]
                 table.add_row("GPU", f"[green]{gpu.name}[/green]")
                 table.add_row("GPU Usage", f"{gpu.load * 100}%")
@@ -280,34 +281,3 @@ class SafeSystemBenchmark:
             title=f"System Benchmark Report - {test_type}",
             border_style="blue"
         ))
-
-def main():
-    benchmark = SafeSystemBenchmark()
-    
-    # Handle Ctrl+C gracefully
-    def signal_handler(sig, frame):
-        benchmark.running = False
-        print("\nBenchmark stopped by user.")
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    # Test selection
-    console = Console()
-    console.print("\n[cyan]Select Benchmark Type:[/cyan]")
-    console.print("1. Mini-Test (30 seconds)")
-    console.print("2. God-Test (120 seconds)")
-    
-    choice = input("\nEnter your choice (1 or 2): ")
-    
-    if choice == "1":
-        benchmark.mini_test()
-    elif choice == "2":
-        benchmark.god_test()
-    else:
-        console.print("[red]Invalid choice. Exiting.[/red]")
-
-if __name__ == "__main__":
-    main()
-    
-    
