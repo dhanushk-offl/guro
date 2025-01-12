@@ -6,7 +6,6 @@ from rich.prompt import Prompt, Confirm
 from rich import print as rprint
 from typing import Optional
 from ..core.monitor import SystemMonitor
-from ..core.optimizer import SystemOptimizer
 from ..core.benchmark import SafeSystemBenchmark
 from ..core.heatmap import SystemHeatmap
 
@@ -55,27 +54,6 @@ def monitor(interval: float, duration: Optional[int], export: bool):
     except Exception as e:
         console.print(f"\n[red]Error during monitoring: {str(e)}[/red]")
 
-@cli.command()
-@click.option('--aggressive', '-a', is_flag=True, help='Use aggressive optimization (use with caution)')
-@click.option('--silent', '-s', is_flag=True, help='Run optimization without prompts')
-def optimize(aggressive: bool, silent: bool):
-    """⚡ Optimize system performance"""
-    try:
-        optimizer = SystemOptimizer()
-        
-        if not silent:
-            if aggressive:
-                confirm = Confirm.ask("⚠️  Aggressive optimization might affect system stability. Continue?")
-                if not confirm:
-                    return
-
-        with console.status("[bold green]Optimizing system performance..."):
-            optimizer.optimize_cpu(aggressive=aggressive)
-            optimizer.clean_system()
-            
-        console.print("[green]✅ System optimization completed successfully![/green]")
-    except Exception as e:
-        console.print(f"[red]Error during optimization: {str(e)}[/red]")
 
 @cli.command()
 @click.option('--type', '-t', 'test_type',
@@ -139,7 +117,6 @@ def list_features():
 
     commands = {
         "monitor": ("📊 Real-time system monitoring", "-i/--interval, -d/--duration, -e/--export"),
-        "optimize": ("⚡ System performance optimization", "-a/--aggressive, -s/--silent"),
         "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only"),
         "heatmap": ("🌡️ Hardware Heatmap Analysis", "-i/--interval, -d/--duration"),
         "about": ("ℹ️  About Guro", "None"),
@@ -165,7 +142,6 @@ def about():
 
 [yellow]Key Features:[/yellow]
 • 📊 Real-time system monitoring
-• ⚡ CPU optimization
 • 💾 Memory management
 • 🧹 System cleaning
 • 🔥 Performance benchmarking
