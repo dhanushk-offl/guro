@@ -21,6 +21,14 @@ if sys.platform.startswith('linux'):
     common_packages.append('pyamdgpuinfo>=2.1.6')
     common_packages.append('distro>=1.7.0')
 
+# Test requirements
+test_requires = [
+    'pytest>=7.0.0',
+    'pytest-mock>=3.10.0',
+    'pytest-cov>=4.0.0',
+    'pytest-timeout>=2.1.0',
+]
+
 setup(
     name="guro",
     packages=find_packages(),
@@ -81,6 +89,7 @@ setup(
             'pyamdgpuinfo>=2.1.0',
             'matplotlib>=3.5.0',
             'plotly>=5.5.0'
-        ]
+        ],
+        'test': test_requires
     }
 )
