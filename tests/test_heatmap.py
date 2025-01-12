@@ -158,7 +158,7 @@ class TestSystemHeatmap(unittest.TestCase):
     def test_cli_command_error_handling(self):
         """Test CLI command error handling."""
         from click.testing import CliRunner
-        from system_heatmap import cli
+        from guro.cli.main import cli
         
         runner = CliRunner()
         result = runner.invoke(cli, ['heatmap', '--interval', '-1'])
