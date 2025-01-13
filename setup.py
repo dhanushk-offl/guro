@@ -14,7 +14,11 @@ common_packages = [
     'tabulate>=0.8.9',
     'py-cpuinfo>=8.0.0',
     'setproctitle>=1.2.2',
-    'keyboard>=0.13.5'
+    'keyboard>=0.13.5',
+    'pytest>=7.0.0',
+    'pytest-mock>=3.10.0',
+    'pytest-cov>=4.0.0',
+    'pytest-timeout>=2.1.0',
 ]
 
 if sys.platform.startswith('linux'):
@@ -40,7 +44,7 @@ setup(
     },
     author="Dhanush Kandhan",
     author_email="Dhanush Kandhan",
-    description="Advanced System and GPU Optimization Toolkit",
+    description="A Simple System Monitoring & Benchmarking Toolkit",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/dhanushk-offl/guro",
