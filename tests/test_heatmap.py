@@ -93,52 +93,77 @@ def test_linux_temps(heatmap, mock_temps):
         assert abs(temps['Motherboard'] - mock_temps['Motherboard']) < 0.1
 
 @patch('rich.live.Live')
-def test_run_method(mock_live, heatmap):
+@patch('time.sleep', return_value=None)
+def test_run_method(mock_sleep, mock_live, heatmap):
     """Test the run method."""
+    # Set up the mock Live context manager
     mock_live_instance = MagicMock()
     mock_live.return_value.__enter__.return_value = mock_live_instance
-    
-    def update_and_interrupt(*args, **kwargs):
-        mock_live_instance.update.call_count += 1
-        raise KeyboardInterrupt()
-    
-    mock_live_instance.update.side_effect = update_and_interrupt
-    mock_live_instance.update.call_count = 0
-    
-    with patch('time.sleep', return_value=None):
-        try:
-            heatmap.run(interval=0.1, duration=1)
-        except KeyboardInterrupt:
-            pass
-    
+
+    # Track the number of updates
+    update_count = 0
+
+    def count_updates(*args, **kwargs):
+        nonlocal update_count
+        update_count += 1
+        if update_count >= 1:
+            raise KeyboardInterrupt()
+
+    # Set up the mock update method
+    mock_live_instance.update = MagicMock(side_effect=count_updates)
+
+    try:
+        heatmap.run(interval=0.1, duration=1)
+    except KeyboardInterrupt:
+        pass
+
+    # Verify that update was called at least once
+    assert update_count >= 1
     assert mock_live_instance.update.call_count >= 1
+    
+    # Verify the mock was called with the expected Panel
+    assert any(isinstance(call_args[0][0], Panel) 
+              for call_args in mock_live_instance.update.call_args_list)
+
 
 def test_cli_command():
     """Test CLI command basic functionality."""
     runner = CliRunner()
-    
-    # Test with minimal duration
+
+    # Test with minimal duration and mocked run
     with patch('guro.core.heatmap.SystemHeatmap.run') as mock_run:
         result = runner.invoke(cli, ['heatmap', '--interval', '1', '--duration', '1'])
         assert result.exit_code == 0
         assert mock_run.called
-    
-    # Mock the CLI validation to properly handle negative values
-    with patch('click.Option') as mock_option:
-        def validate_positive(ctx, param, value):
-            if value <= 0:
-                raise click.BadParameter('Value must be positive')
-            return value
-            
-        mock_option.type.convert.side_effect = validate_positive
-        
-        # Test with invalid interval
+
+    # Test invalid interval using Click's type checking
+    class CustomParam(click.ParamType):
+        def convert(self, value, param, ctx):
+            try:
+                v = float(value)
+                if v <= 0:
+                    self.fail(f'{value} is not a positive number', param, ctx)
+                return v
+            except ValueError:
+                self.fail(f'{value} is not a valid number', param, ctx)
+
+    with patch('click.FloatRange', CustomParam):
+        # Test with negative interval
         result = runner.invoke(cli, ['heatmap', '--interval', '-1'])
-        assert result.exit_code != 0  # Changed from 2 to handle different click versions
-        
-        # Test with invalid duration
+        assert result.exit_code == 2, \
+            f"Expected exit code 2 for negative interval, got {result.exit_code}"
+        assert "Error" in result.output or "error" in result.output.lower()
+
+        # Test with negative duration
         result = runner.invoke(cli, ['heatmap', '--duration', '-1'])
-        assert result.exit_code != 0  # Changed from 2 to handle different click versions
+        assert result.exit_code == 2, \
+            f"Expected exit code 2 for negative duration, got {result.exit_code}"
+        assert "Error" in result.output or "error" in result.output.lower()
+
+    # Test with zero interval
+    result = runner.invoke(cli, ['heatmap', '--interval', '0'])
+    assert result.exit_code == 2, \
+        f"Expected exit code 2 for zero interval, got {result.exit_code}"
 
 def test_get_temp_char(heatmap):
     """Test temperature character mapping."""
