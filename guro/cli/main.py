@@ -144,7 +144,7 @@ def about():
 [green]Author:[/green] Dhanush Kandhan
 [green]License:[/green] MIT
         
-🛠️  A Simple powerful toolkit for system monitoring and optimization.
+🛠️  A Simple powerful toolkit for system monitoring and benchmarking.
 
 [yellow]Key Features:[/yellow]
 • 📊 Real-time system monitoring
