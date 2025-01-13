@@ -89,8 +89,14 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             border_style="red"
         ))
 @cli.command()
-@click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
-@click.option('--duration', '-d', default=None, type=int, help='Duration to run in seconds')
+@click.option('--interval', '-i', 
+              type=click.FloatRange(min=0.1, min_open=False),
+              default=1.0, 
+              help='Update interval in seconds (must be greater than 0.1)')
+@click.option('--duration', '-d', 
+              type=click.IntRange(min=1, min_open=False),
+              default=None, 
+              help='Duration to run in seconds (must be positive if specified)')
 def heatmap(interval: float, duration: Optional[int]):
     """🌡️ Display unified system temperature heatmap"""
     try:

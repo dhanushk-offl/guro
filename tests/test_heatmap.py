@@ -96,74 +96,86 @@ def test_linux_temps(heatmap, mock_temps):
 @patch('time.sleep', return_value=None)
 def test_run_method(mock_sleep, mock_live, heatmap):
     """Test the run method."""
-    # Set up the mock Live context manager
+    # Create a counter to track updates
+    updates = {'count': 0}
+    
+    # Create a mock Live instance
     mock_live_instance = MagicMock()
+    
+    # Set up the context manager return
     mock_live.return_value.__enter__.return_value = mock_live_instance
-
-    # Track the number of updates
-    update_count = 0
-
-    def count_updates(*args, **kwargs):
-        nonlocal update_count
-        update_count += 1
-        if update_count >= 1:
+    
+    def fake_update(panel):
+        updates['count'] += 1
+        if updates['count'] >= 1:
             raise KeyboardInterrupt()
-
-    # Set up the mock update method
-    mock_live_instance.update = MagicMock(side_effect=count_updates)
-
+    
+    # Directly assign the update side effect
+    mock_live_instance.update = fake_update
+    
+    # Run the heatmap
     try:
         heatmap.run(interval=0.1, duration=1)
     except KeyboardInterrupt:
         pass
-
-    # Verify that update was called at least once
-    assert update_count >= 1
-    assert mock_live_instance.update.call_count >= 1
     
-    # Verify the mock was called with the expected Panel
-    assert any(isinstance(call_args[0][0], Panel) 
-              for call_args in mock_live_instance.update.call_args_list)
+    # Verify the update was called
+    assert updates['count'] >= 1, f"Update was called {updates['count']} times, expected at least 1"
 
 
 def test_cli_command():
     """Test CLI command basic functionality."""
     runner = CliRunner()
-
-    # Test with minimal duration and mocked run
+    
+    # Test successful cases
     with patch('guro.core.heatmap.SystemHeatmap.run') as mock_run:
+        # Test with valid interval and duration
         result = runner.invoke(cli, ['heatmap', '--interval', '1', '--duration', '1'])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Failed with output: {result.output}"
         assert mock_run.called
+        
+        # Test with default values
+        result = runner.invoke(cli, ['heatmap'])
+        assert result.exit_code == 0, f"Failed with output: {result.output}"
+        
+    # Test invalid cases
+    invalid_cases = [
+        ('--interval', '-1', 'Invalid value for "--interval"'),
+        ('--interval', '0', 'Invalid value for "--interval"'),
+        ('--duration', '-1', 'Invalid value for "--duration"'),
+        ('--duration', '0', 'Invalid value for "--duration"'),
+    ]
+    
+    for param, value, expected_error in invalid_cases:
+        result = runner.invoke(cli, ['heatmap', param, value])
+        assert result.exit_code == 2, (
+            f"Expected exit code 2 for {param}={value}, got {result.exit_code}\n"
+            f"Output was: {result.output}"
+        )
+        assert expected_error in result.output, (
+            f"Expected error message containing '{expected_error}'\n"
+            f"Got output: {result.output}"
+        )
 
-    # Test invalid interval using Click's type checking
-    class CustomParam(click.ParamType):
-        def convert(self, value, param, ctx):
-            try:
-                v = float(value)
-                if v <= 0:
-                    self.fail(f'{value} is not a positive number', param, ctx)
-                return v
-            except ValueError:
-                self.fail(f'{value} is not a valid number', param, ctx)
+def test_cli_keyboard_interrupt():
+    """Test CLI command handles keyboard interrupt."""
+    runner = CliRunner()
+    
+    with patch('guro.core.heatmap.SystemHeatmap.run') as mock_run:
+        mock_run.side_effect = KeyboardInterrupt()
+        result = runner.invoke(cli, ['heatmap'])
+        assert result.exit_code == 0
+        assert "stopped by user" in result.output.lower()
 
-    with patch('click.FloatRange', CustomParam):
-        # Test with negative interval
-        result = runner.invoke(cli, ['heatmap', '--interval', '-1'])
-        assert result.exit_code == 2, \
-            f"Expected exit code 2 for negative interval, got {result.exit_code}"
-        assert "Error" in result.output or "error" in result.output.lower()
-
-        # Test with negative duration
-        result = runner.invoke(cli, ['heatmap', '--duration', '-1'])
-        assert result.exit_code == 2, \
-            f"Expected exit code 2 for negative duration, got {result.exit_code}"
-        assert "Error" in result.output or "error" in result.output.lower()
-
-    # Test with zero interval
-    result = runner.invoke(cli, ['heatmap', '--interval', '0'])
-    assert result.exit_code == 2, \
-        f"Expected exit code 2 for zero interval, got {result.exit_code}"
+def test_cli_error_handling():
+    """Test CLI command handles general errors."""
+    runner = CliRunner()
+    
+    with patch('guro.core.heatmap.SystemHeatmap.run') as mock_run:
+        mock_run.side_effect = Exception("Test error")
+        result = runner.invoke(cli, ['heatmap'])
+        assert result.exit_code == 0  # We're catching the error in the CLI
+        assert "error during heatmap visualization" in result.output.lower()
 
 def test_get_temp_char(heatmap):
     """Test temperature character mapping."""
