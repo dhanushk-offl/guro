@@ -22,14 +22,14 @@ def print_banner():
   ╚██████╔╝╚██████╔╝██║  ██║╚██████╔╝
    ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ 
 [/bold cyan]
-[yellow]Advanced System Optimization Toolkit[/yellow]
+[yellow]A Simple System Monitoring & Benchmarking Toolkit[/yellow]
     """
     console.print(banner)
 
 @click.group()
 @click.version_option(version='1.0.0')
 def cli():
-    """🚀 Guro - Advanced System Optimization Toolkit"""
+    """🚀 Guro - A Simple System Monitoring & Benchmarking Toolkit"""
     print_banner()
 
 @cli.command()
@@ -138,24 +138,22 @@ def list_features():
 @cli.command(name='about')
 def about():
     """ℹ️  Display information about Guro"""
-    about_text = """[bold cyan]Guro - Advanced System Optimization Toolkit[/bold cyan]
+    about_text = """[bold cyan]Guro - A Simple System Monitoring & Benchmarking Toolkit[/bold cyan]
         
 [green]Version:[/green] 1.0.0
 [green]Author:[/green] Dhanush Kandhan
 [green]License:[/green] MIT
         
-🛠️  A powerful toolkit for system monitoring and optimization.
+🛠️  A Simple powerful toolkit for system monitoring and optimization.
 
 [yellow]Key Features:[/yellow]
 • 📊 Real-time system monitoring
 • 💾 Memory management
-• 🧹 System cleaning
 • 🔥 Performance benchmarking
 • 🌡️ Hardware Heatmap Analysis
-• 📈 Resource tracking
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro
-[blue]Documentation:[/blue] https://guro.readthedocs.io"""
+[blue]Documentation:[/blue] https://github.com/dhanushk-offl/guro/wiki"""
 
     console.print(Panel(about_text, title="About Guro", border_style="blue"))
 
