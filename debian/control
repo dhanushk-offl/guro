@@ -6,7 +6,7 @@ Build-Depends: debhelper-compat (= 13),
                dh-python,
                python3-all,
                python3-setuptools,
-               python3-pytest (>= 7.0.0),
+               python3-pytest,
                python3-rich (>= 10.0.0),
                python3-psutil (>= 5.8.0),
                python3-matplotlib (>= 3.5.0)
