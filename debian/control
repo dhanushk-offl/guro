@@ -49,3 +49,4 @@ Depends: ${python3:Depends},
          python3-distro (>= 1.7.0) [linux-any]
 Description: A Simple System Benchmarking & Monitoring Toolkit
  Guro is a powerful system monitoring and benchmarking tool that provides real-time system metrics and performance tuning.
+ 
