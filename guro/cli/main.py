@@ -88,30 +88,32 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             title="⚠️ Benchmark Error",
             border_style="red"
         ))
-@cli.command()
+@click.command()
 @click.option('--interval', '-i', 
               type=click.FloatRange(min=0.1, min_open=False),
               default=1.0, 
               help='Update interval in seconds (must be greater than 0.1)')
 @click.option('--duration', '-d', 
               type=click.IntRange(min=1, min_open=False),
-              default=None, 
-              help='Duration to run in seconds (must be positive if specified)')
-def heatmap(interval: float, duration: Optional[int]):
+              default=10, 
+              help='Duration to run in seconds (default: 10)')
+def heatmap(interval: float, duration: int):
     """🌡️ Display unified system temperature heatmap"""
     try:
         heatmap = SystemHeatmap()
         
         with console.status("[bold green]Initializing system heatmap..."):
-            heatmap.run(
+            updates = heatmap.run(
                 interval=interval,
                 duration=duration
             )
+            
+        console.print(f"\n[green]Heatmap completed after {updates} updates[/green]")
+            
     except KeyboardInterrupt:
         console.print("\n[yellow]Heatmap visualization stopped by user[/yellow]")
     except Exception as e:
         console.print(f"[red]Error during heatmap visualization: {str(e)}[/red]")
-
 
 @cli.command(name='list')
 def list_features():

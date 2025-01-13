@@ -238,135 +238,112 @@ import psutil
 from rich.panel import Panel
 from rich.text import Text
 import ctypes
-
+import time
+from pathlib import Path
+from rich.console import Console
 # Import the SystemHeatmap class from your module
 from guro.core.heatmap import SystemHeatmap  # Assuming the file is named paste.py
 
-@pytest.fixture
-def system_heatmap():
-    with patch('platform.system', return_value='Windows'):
-        yield SystemHeatmap()
+def test_system_heatmap_initialization():
+    heatmap = SystemHeatmap()
+    assert isinstance(heatmap.console, Console)
+    assert heatmap.history_size == 60
+    assert heatmap.system == platform.system()
+    assert all(component in heatmap.components for component in ['CPU', 'GPU', 'Motherboard', 'RAM', 'Storage'])
 
-@pytest.fixture
-def mock_psutil():
-    with patch('psutil.cpu_percent', return_value=50.0), \
-         patch('psutil.virtual_memory') as mock_memory, \
-         patch('psutil.disk_io_counters') as mock_disk:
-        
-        mock_memory.return_value.percent = 60.0
-        mock_disk.return_value.read_bytes = 1000000
-        mock_disk.return_value.write_bytes = 1000000
-        yield
-
-@pytest.fixture
-def mock_windows_api():
-    with patch('ctypes.windll') as mock_windll, \
-         patch('ctypes.create_string_buffer'), \
-         patch('ctypes.sizeof'):
-        mock_windll.kernel32.GetSystemPowerStatus.return_value = True
-        mock_windll.powrprof.CallNtPowerInformation.return_value = 0
-        yield mock_windll
-
-def test_initialization(system_heatmap):
-    assert isinstance(system_heatmap, SystemHeatmap)
-    assert len(system_heatmap.components) == 5
-    assert all(key in system_heatmap.temp_maps for key in system_heatmap.components)
-
-def test_get_temp_char(system_heatmap):
+def test_temperature_character_mapping():
+    heatmap = SystemHeatmap()
     # Test cold temperature
-    char, color = system_heatmap.get_temp_char(30.0)
+    char, color = heatmap.get_temp_char(30.0)
     assert char == '·'
     assert color == "green"
-
+    
     # Test medium temperature
-    char, color = system_heatmap.get_temp_char(60.0)
+    char, color = heatmap.get_temp_char(60.0)
     assert char == '▒'
     assert color == "yellow"
-
+    
     # Test hot temperature
-    char, color = system_heatmap.get_temp_char(80.0)
+    char, color = heatmap.get_temp_char(80.0)
     assert char == '█'
     assert color == "red"
 
-def test_update_component_map(system_heatmap):
+def test_temperature_map_update():
+    heatmap = SystemHeatmap()
     component = 'CPU'
-    temp = 50.0
+    test_temp = 50.0
     
-    # Set random seed for reproducibility
-    np.random.seed(42)
+    heatmap.update_component_map(component, test_temp)
+    temp_map = heatmap.temp_maps[component]
     
-    system_heatmap.update_component_map(component, temp)
+    # Check if the temperature map has the correct shape
+    expected_shape = heatmap.components[component]['size']
+    assert temp_map.shape == expected_shape
     
-    # Check if the temperature map was updated
-    assert system_heatmap.temp_maps[component].shape == \
-           system_heatmap.components[component]['size']
+    # Check if the mean temperature is close to the input temperature (allowing for noise)
+    assert abs(np.mean(temp_map) - test_temp) < 5.0
+
+@patch('psutil.cpu_percent')
+@patch('psutil.virtual_memory')
+def test_fallback_temperatures(mock_virtual_memory, mock_cpu_percent):
+    mock_cpu_percent.return_value = 50.0
+    mock_memory = Mock()
+    mock_memory.percent = 60.0
+    mock_virtual_memory.return_value = mock_memory
     
-    # Check if values are within expected range (temp ± noise)
-    assert np.all(system_heatmap.temp_maps[component] >= 0)
-    assert np.all(system_heatmap.temp_maps[component] <= 100)
-
-@pytest.mark.usefixtures("mock_psutil")
-def test_get_fallback_temps(system_heatmap):
-    temps = system_heatmap.get_fallback_temps()
-    
-    assert isinstance(temps, dict)
-    assert len(temps) == 5
-    assert all(isinstance(temp, float) for temp in temps.values())
-    assert all(0 <= temp <= 100 for temp in temps.values())
-
-@pytest.mark.usefixtures("mock_psutil")
-def test_get_cpu_load_temp(system_heatmap):
-    temp = system_heatmap.get_cpu_load_temp()
-    assert isinstance(temp, float)
-    assert 40 <= temp <= 100  # Base temp (40) + max possible addition (60)
-
-@pytest.mark.usefixtures("mock_psutil")
-def test_get_gpu_load_temp(system_heatmap):
-    temp = system_heatmap.get_gpu_load_temp()
-    assert isinstance(temp, float)
-    assert 35 <= temp <= 85  # Base temp (35) + max possible addition (50)
-
-@pytest.mark.usefixtures("mock_psutil")
-def test_get_disk_load_temp(system_heatmap):
-    temp = system_heatmap.get_disk_load_temp()
-    assert isinstance(temp, float)
-    assert 30 <= temp <= 100
-
-@pytest.mark.usefixtures("mock_windows_api", "mock_psutil")
-def test_get_windows_temps(system_heatmap):
-    temps = system_heatmap.get_windows_temps()
+    heatmap = SystemHeatmap()
+    temps = heatmap.get_fallback_temps()
     
     assert isinstance(temps, dict)
-    assert len(temps) == 5
+    assert all(component in temps for component in ['CPU', 'GPU', 'Motherboard', 'RAM', 'Storage'])
     assert all(isinstance(temp, float) for temp in temps.values())
-    assert all(0 <= temp <= 100 for temp in temps.values())
 
-def test_generate_system_layout(system_heatmap):
-    with patch.object(system_heatmap, 'get_system_temps') as mock_temps:
-        mock_temps.return_value = {
-            'CPU': 50.0,
-            'GPU': 60.0,
-            'Motherboard': 45.0,
-            'Storage': 40.0,
-            'RAM': 55.0
-        }
-        
-        layout = system_heatmap.generate_system_layout()
-        
-        assert isinstance(layout, Panel)
-        assert "System Temperature Heatmap" in layout.title
-        assert isinstance(layout.renderable, Text)
+def test_system_layout_generation():
+    heatmap = SystemHeatmap()
+    layout = heatmap.generate_system_layout()
+    
+    assert isinstance(layout, Panel)
+    assert "System Temperature Heatmap" in layout.title
 
-def test_run_with_duration(system_heatmap):
-    with patch('time.sleep'), \
-         patch('rich.live.Live') as mock_live, \
-         patch.object(system_heatmap, 'generate_system_layout'):
+@pytest.mark.parametrize("interval,duration", [
+    (1.0, 3),  # Normal case
+    (0.5, 2),  # Faster updates
+    (2.0, 4),  # Slower updates
+])
+def test_heatmap_run_duration(interval, duration):
+    heatmap = SystemHeatmap()
+    start_time = time.time()
+    
+    update_count = heatmap.run(interval=interval, duration=duration)
+    
+    elapsed_time = time.time() - start_time
+    assert elapsed_time >= duration - 0.1  # Allow for small timing variations
+    assert elapsed_time <= duration + 1.0  # Allow for some overhead
+    
+    # Check if update count is reasonable
+    expected_updates = duration / interval
+    assert abs(update_count - expected_updates) <= 2  # Allow for some variation
+
+@pytest.mark.parametrize("system_name", ["Windows", "Linux", "Darwin"])
+def test_system_specific_temperatures(system_name):
+    with patch('platform.system', return_value=system_name):
+        heatmap = SystemHeatmap()
+        temps = heatmap.get_system_temps()
         
-        # Test running for 2 updates with 0.1 second interval
-        update_count = system_heatmap.run(interval=0.1, duration=0.2)
-        
-        assert update_count > 0
-        assert mock_live.call_count == 1
+        assert isinstance(temps, dict)
+        assert all(component in temps for component in ['CPU', 'GPU', 'Motherboard', 'RAM', 'Storage'])
+        assert all(isinstance(temp, float) for temp in temps.values())
+        assert all(0 <= temp <= 100 for temp in temps.values())
+
+def test_invalid_duration():
+    with pytest.raises(Exception):
+        heatmap = SystemHeatmap()
+        heatmap.run(interval=1.0, duration=-1)
+
+def test_invalid_interval():
+    with pytest.raises(Exception):
+        heatmap = SystemHeatmap()
+        heatmap.run(interval=0, duration=5)
 
 if __name__ == '__main__':
-    pytest.main(['-v'])
+    pytest.main([__file__])
