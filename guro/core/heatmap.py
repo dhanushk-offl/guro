@@ -312,21 +312,27 @@ class SystemHeatmap:
             border_style="blue"
         )
 
-    def run(self, interval: float = 1.0, duration: Optional[int] = None):
-        start_time = time.time()
-        update_count = 0
+def run(self, interval: float = 1.0, duration: Optional[int] = None):
+    # Add validation checks at the start of the method
+    if duration is not None and duration <= 0:
+        raise ValueError("Duration must be positive")
+    if interval <= 0:
+        raise ValueError("Interval must be positive")
+
+    start_time = time.time()
+    update_count = 0
+    
+    with Live(self.generate_system_layout(), refresh_per_second=1) as live:
+        try:
+            while True:
+                live.update(self.generate_system_layout())
+                update_count += 1
+                
+                if duration and (time.time() - start_time) >= duration:
+                    break
+                
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            pass
         
-        with Live(self.generate_system_layout(), refresh_per_second=1) as live:
-            try:
-                while True:
-                    live.update(self.generate_system_layout())
-                    update_count += 1
-                    
-                    if duration and (time.time() - start_time) >= duration:
-                        break
-                    
-                    time.sleep(interval)
-            except KeyboardInterrupt:
-                pass
-            
-            return update_count  # Return the number of updates for testing purposes
+        return update_count  # Return the number of updates for testing purposes

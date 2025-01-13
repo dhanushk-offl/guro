@@ -237,12 +237,10 @@ import platform
 import psutil
 from rich.panel import Panel
 from rich.text import Text
-import ctypes
 import time
 from pathlib import Path
 from rich.console import Console
-# Import the SystemHeatmap class from your module
-from guro.core.heatmap import SystemHeatmap  # Assuming the file is named paste.py
+from guro.core.heatmap import SystemHeatmap
 
 def test_system_heatmap_initialization():
     heatmap = SystemHeatmap()
@@ -326,23 +324,30 @@ def test_heatmap_run_duration(interval, duration):
 
 @pytest.mark.parametrize("system_name", ["Windows", "Linux", "Darwin"])
 def test_system_specific_temperatures(system_name):
+    # Skip Windows tests when not on Windows
+    if system_name == "Windows" and platform.system() != "Windows":
+        pytest.skip("Skipping Windows-specific test on non-Windows platform")
+    
     with patch('platform.system', return_value=system_name):
-        heatmap = SystemHeatmap()
-        temps = heatmap.get_system_temps()
-        
-        assert isinstance(temps, dict)
-        assert all(component in temps for component in ['CPU', 'GPU', 'Motherboard', 'RAM', 'Storage'])
-        assert all(isinstance(temp, float) for temp in temps.values())
-        assert all(0 <= temp <= 100 for temp in temps.values())
+        with patch('guro.core.heatmap.windll', create=True) if system_name == "Windows" else patch('platform.system'):
+            heatmap = SystemHeatmap()
+            temps = heatmap.get_system_temps()
+            
+            assert isinstance(temps, dict)
+            assert all(component in temps for component in ['CPU', 'GPU', 'Motherboard', 'RAM', 'Storage'])
+            assert all(isinstance(temp, float) for temp in temps.values())
+            assert all(0 <= temp <= 100 for temp in temps.values())
 
 def test_invalid_duration():
-    with pytest.raises(Exception):
-        heatmap = SystemHeatmap()
+    heatmap = SystemHeatmap()
+    with pytest.raises(ValueError):  # Changed from general Exception
+        # Add validation in the run method to raise ValueError
         heatmap.run(interval=1.0, duration=-1)
 
 def test_invalid_interval():
-    with pytest.raises(Exception):
-        heatmap = SystemHeatmap()
+    heatmap = SystemHeatmap()
+    with pytest.raises(ValueError):  # Changed from general Exception
+        # Add validation in the run method to raise ValueError
         heatmap.run(interval=0, duration=5)
 
 if __name__ == '__main__':
