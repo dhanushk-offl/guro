@@ -6,7 +6,7 @@ import platform
 from rich.console import Console
 from rich.table import Table
 
-# First, mock GPUtil to handle the import scenario
+# Create a mock GPUtil module
 mock_GPUtil = Mock()
 mock_GPUtil.getGPUs = Mock()
 
@@ -27,7 +27,8 @@ class TestSafeSystemBenchmark:
         assert benchmark.MAX_CPU_USAGE <= 100
         assert benchmark.MAX_MEMORY_USAGE <= 100
 
-    @patch('GPUtil.getGPUs')
+    @patch('guro.core.benchmark.HAS_GPU_STATS', True)  # Add this line
+    @patch('guro.core.benchmark.GPUtil.getGPUs')
     def test_check_gpu_with_gpu(self, mock_getGPUs, benchmark):
         """Test GPU detection when GPU is available"""
         # Create a mock GPU object
@@ -93,7 +94,8 @@ class TestSafeSystemBenchmark:
         assert len(result['times']) > 0
         assert len(result['usage']) > 0
 
-    @patch('GPUtil.getGPUs')
+    @patch('guro.core.benchmark.HAS_GPU_STATS', True)  # Add this line
+    @patch('guro.core.benchmark.GPUtil.getGPUs')
     @patch('time.sleep', return_value=None)
     def test_safe_gpu_test_with_gpu(self, mock_sleep, mock_getGPUs, benchmark):
         """Test GPU benchmark when GPU is available"""
@@ -103,10 +105,22 @@ class TestSafeSystemBenchmark:
         mock_gpu.memoryUsed = 4096
         mock_getGPUs.return_value = [mock_gpu]
         
-        # Set up the benchmark to think it has a GPU
-        benchmark.has_gpu = {'available': True, 'info': {'name': 'Test GPU'}}
+        # Set up the benchmark correctly by mocking the initial GPU check
+        mock_gpu_init = Mock()
+        mock_gpu_init.name = "Test GPU"
+        mock_gpu_init.memoryTotal = 8192
+        mock_gpu_init.driver = "123.45"
+        mock_getGPUs.return_value = [mock_gpu_init]
+        benchmark.has_gpu = benchmark._check_gpu()  # This will now properly set has_gpu
+        
         benchmark.running = True
         duration = 1
+        
+        # Reset mock to return the benchmark GPU data
+        mock_gpu = Mock()
+        mock_gpu.load = 0.5
+        mock_gpu.memoryUsed = 4096
+        mock_getGPUs.return_value = [mock_gpu]
         
         result = benchmark.safe_gpu_test(duration)
         

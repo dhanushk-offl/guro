@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock, mock_open, call
 import platform
 import psutil
 import numpy as np
@@ -62,6 +62,8 @@ def test_windows_setup():
         assert hasattr(heatmap, 'system')
         assert heatmap.system == "Windows"
 
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Linux-specific test")
 def test_linux_temps(heatmap, mock_temps):
     """Test Linux temperature gathering."""
     with patch('platform.system', return_value='Linux'), \
@@ -99,19 +101,21 @@ def test_run_method(mock_sleep, mock_live, heatmap):
     # Create a counter to track updates
     updates = {'count': 0}
     
-    # Create a mock Live instance
-    mock_live_instance = MagicMock()
-    
-    # Set up the context manager return
-    mock_live.return_value.__enter__.return_value = mock_live_instance
-    
     def fake_update(panel):
         updates['count'] += 1
         if updates['count'] >= 1:
             raise KeyboardInterrupt()
     
-    # Directly assign the update side effect
+    # Create a mock Live instance that will call our fake_update
+    mock_live_instance = MagicMock()
     mock_live_instance.update = fake_update
+    
+    # Set up the context manager to return our mock instance
+    mock_live.return_value.__enter__.return_value = mock_live_instance
+    
+    # Mock the generate_system_layout method to return a consistent panel
+    mock_panel = Panel("Test")
+    heatmap.generate_system_layout = MagicMock(return_value=mock_panel)
     
     # Run the heatmap
     try:
@@ -119,9 +123,9 @@ def test_run_method(mock_sleep, mock_live, heatmap):
     except KeyboardInterrupt:
         pass
     
-    # Verify the update was called
+    # Verify the update was called and sleep was called
     assert updates['count'] >= 1, f"Update was called {updates['count']} times, expected at least 1"
-
+    mock_sleep.assert_called_with(0.1)
 
 def test_cli_command():
     """Test CLI command basic functionality."""
@@ -137,13 +141,13 @@ def test_cli_command():
         # Test with default values
         result = runner.invoke(cli, ['heatmap'])
         assert result.exit_code == 0, f"Failed with output: {result.output}"
-        
+    
     # Test invalid cases
     invalid_cases = [
-        ('--interval', '-1', 'Invalid value for "--interval"'),
-        ('--interval', '0', 'Invalid value for "--interval"'),
-        ('--duration', '-1', 'Invalid value for "--duration"'),
-        ('--duration', '0', 'Invalid value for "--duration"'),
+        ('--interval', '-1', "Invalid value for '--interval' / '-i': -1.0 is not in the range x>=0.1"),
+        ('--interval', '0', "Invalid value for '--interval' / '-i': 0.0 is not in the range x>=0.1"),
+        ('--duration', '-1', "Invalid value for '--duration' / '-d': -1 is not in the range x>=1"),
+        ('--duration', '0', "Invalid value for '--duration' / '-d': 0 is not in the range x>=1"),
     ]
     
     for param, value, expected_error in invalid_cases:
