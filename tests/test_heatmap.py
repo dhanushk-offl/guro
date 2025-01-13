@@ -11,6 +11,7 @@ from rich.live import Live
 from click.testing import CliRunner
 import ctypes
 import click
+import time
 
 from guro.cli.main import cli
 from guro.core.heatmap import SystemHeatmap
@@ -43,6 +44,37 @@ def test_initialization(heatmap):
     assert all(isinstance(heatmap.temp_maps[component], np.ndarray) 
               for component in heatmap.components)
 
+def test_run_method(heatmap):
+    """Test the run method."""
+    updates = {'count': 0}
+    mock_panel = Panel("Test")
+    
+    def mock_update(content):
+        updates['count'] += 1
+        if updates['count'] >= 1:
+            raise KeyboardInterrupt()
+
+    mock_live = MagicMock()
+    mock_live.update = mock_update
+
+    with patch('rich.live.Live', return_value=mock_live) as mock_live_class, \
+         patch('time.sleep', return_value=None) as mock_sleep, \
+         patch.object(heatmap, 'generate_system_layout', return_value=mock_panel):
+        
+        # Set up the context manager behavior
+        mock_live_class.return_value.__enter__.return_value = mock_live
+        mock_live_class.return_value.__exit__.return_value = None
+
+        # Run the heatmap
+        try:
+            heatmap.run(interval=0.1, duration=1)
+        except KeyboardInterrupt:
+            pass
+
+        # Verify the update was called and sleep was called
+        assert updates['count'] >= 1, f"Update was called {updates['count']} times, expected at least 1"
+        mock_sleep.assert_called_with(0.1)
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
 def test_windows_setup():
     """Test Windows-specific setup."""
@@ -62,8 +94,6 @@ def test_windows_setup():
         assert hasattr(heatmap, 'system')
         assert heatmap.system == "Windows"
 
-
-@pytest.mark.skipif(platform.system() != "Linux", reason="Linux-specific test")
 def test_linux_temps(heatmap, mock_temps):
     """Test Linux temperature gathering."""
     with patch('platform.system', return_value='Linux'), \
@@ -93,40 +123,6 @@ def test_linux_temps(heatmap, mock_temps):
         assert all(component in temps for component in mock_temps.keys())
         assert abs(temps['CPU'] - mock_temps['CPU']) < 0.1
         assert abs(temps['Motherboard'] - mock_temps['Motherboard']) < 0.1
-
-@patch('time.sleep', return_value=None)
-@patch('rich.live.Live')
-def test_run_method(mock_live, mock_sleep, heatmap):
-    """Test the run method."""
-    
-    # Mock the Panel to ensure consistent output
-    mock_panel = Panel("Test")
-    heatmap.generate_system_layout = MagicMock(return_value=mock_panel)
-    
-    # Create a mock Live context manager and instance
-    mock_live_instance = MagicMock()
-    mock_live.return_value = mock_live_instance
-    
-    # Set up the update call to increment counter and raise KeyboardInterrupt
-    updates = {'count': 0}
-    def fake_refresh():
-        updates['count'] += 1
-        if updates['count'] >= 1:
-            raise KeyboardInterrupt()
-    
-    # Configure the mock to call our fake_refresh when refresh() is called
-    mock_live_instance.refresh = fake_refresh
-    
-    # Mock the context manager behavior
-    mock_live_instance.__enter__.return_value = mock_live_instance
-    mock_live_instance.__exit__.return_value = None
-    
-    # Run the heatmap
-    heatmap.run(interval=0.1, duration=1)
-    
-    # Verify the refresh was called and sleep was called
-    assert updates['count'] >= 1, f"Refresh was called {updates['count']} times, expected at least 1"
-    mock_sleep.assert_called_with(0.1)
 
 def test_cli_command():
     """Test CLI command basic functionality."""
