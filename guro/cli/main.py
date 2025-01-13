@@ -54,7 +54,6 @@ def monitor(interval: float, duration: Optional[int], export: bool):
     except Exception as e:
         console.print(f"\n[red]Error during monitoring: {str(e)}[/red]")
 
-
 @cli.command()
 @click.option('--type', '-t', 'test_type',
               type=click.Choice(['mini', 'god'], case_sensitive=False),
@@ -79,7 +78,6 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             else:
                 benchmark.god_test(gpu_only=gpu_only, cpu_only=cpu_only)
 
-
     except KeyboardInterrupt:
         console.print("\n[yellow]Benchmark stopped by user[/yellow]")
     except Exception as e:
@@ -88,7 +86,8 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             title="⚠️ Benchmark Error",
             border_style="red"
         ))
-@click.command()
+
+@cli.command()  # Added the cli decorator here
 @click.option('--interval', '-i', 
               type=click.FloatRange(min=0.1, min_open=False),
               default=1.0, 
@@ -135,7 +134,6 @@ def list_features():
         table.add_row(cmd, desc, opts)
 
     console.print(table)
-
 
 @cli.command(name='about')
 def about():
