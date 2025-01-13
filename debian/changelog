@@ -1,5 +1,5 @@
-guro (1.0.0) stable; urgency=medium
+guro (1.0.0) unstable; urgency=medium
 
-  * Initial release.
+  * Initial release of Guro - A system benchmarking and monitoring tool.
 
- -- Dhanu <dhanushkandhan75@gmail.com>  Wed, 14 Jan 2025 12:00:00 +0000
+ -- Dhanush Kandhan <dhanushkandhan75@gmail.com>  Wed, 14 Jan 2025 12:00:00 +0000
