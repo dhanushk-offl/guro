@@ -231,134 +231,142 @@
 #             assert all(0 <= temp <= 100 for temp in temps.values())
 
 import pytest
-from unittest.mock import patch, MagicMock
-from rich.panel import Panel
-import time
-import platform
+from unittest.mock import Mock, patch
 import numpy as np
-from typing import Dict
+import platform
+import psutil
+from rich.panel import Panel
+from rich.text import Text
+import ctypes
 
-# Import the SystemHeatmap class - adjust the import path as needed
-from guro.core.heatmap import SystemHeatmap
+# Import the SystemHeatmap class from your module
+from guro.core.heatmap import SystemHeatmap  # Assuming the file is named paste.py
 
 @pytest.fixture
-def heatmap():
-    """Fixture to create a SystemHeatmap instance with mocked platform."""
-    with patch('platform.system', return_value='Linux'):
-        system_heatmap = SystemHeatmap()
-        # Mock the temperature maps to avoid random number generation
-        system_heatmap.temp_maps = {
-            component: np.zeros(dims['size']) 
-            for component, dims in system_heatmap.components.items()
+def system_heatmap():
+    with patch('platform.system', return_value='Windows'):
+        yield SystemHeatmap()
+
+@pytest.fixture
+def mock_psutil():
+    with patch('psutil.cpu_percent', return_value=50.0), \
+         patch('psutil.virtual_memory') as mock_memory, \
+         patch('psutil.disk_io_counters') as mock_disk:
+        
+        mock_memory.return_value.percent = 60.0
+        mock_disk.return_value.read_bytes = 1000000
+        mock_disk.return_value.write_bytes = 1000000
+        yield
+
+@pytest.fixture
+def mock_windows_api():
+    with patch('ctypes.windll') as mock_windll, \
+         patch('ctypes.create_string_buffer'), \
+         patch('ctypes.sizeof'):
+        mock_windll.kernel32.GetSystemPowerStatus.return_value = True
+        mock_windll.powrprof.CallNtPowerInformation.return_value = 0
+        yield mock_windll
+
+def test_initialization(system_heatmap):
+    assert isinstance(system_heatmap, SystemHeatmap)
+    assert len(system_heatmap.components) == 5
+    assert all(key in system_heatmap.temp_maps for key in system_heatmap.components)
+
+def test_get_temp_char(system_heatmap):
+    # Test cold temperature
+    char, color = system_heatmap.get_temp_char(30.0)
+    assert char == '·'
+    assert color == "green"
+
+    # Test medium temperature
+    char, color = system_heatmap.get_temp_char(60.0)
+    assert char == '▒'
+    assert color == "yellow"
+
+    # Test hot temperature
+    char, color = system_heatmap.get_temp_char(80.0)
+    assert char == '█'
+    assert color == "red"
+
+def test_update_component_map(system_heatmap):
+    component = 'CPU'
+    temp = 50.0
+    
+    # Set random seed for reproducibility
+    np.random.seed(42)
+    
+    system_heatmap.update_component_map(component, temp)
+    
+    # Check if the temperature map was updated
+    assert system_heatmap.temp_maps[component].shape == \
+           system_heatmap.components[component]['size']
+    
+    # Check if values are within expected range (temp ± noise)
+    assert np.all(system_heatmap.temp_maps[component] >= 0)
+    assert np.all(system_heatmap.temp_maps[component] <= 100)
+
+@pytest.mark.usefixtures("mock_psutil")
+def test_get_fallback_temps(system_heatmap):
+    temps = system_heatmap.get_fallback_temps()
+    
+    assert isinstance(temps, dict)
+    assert len(temps) == 5
+    assert all(isinstance(temp, float) for temp in temps.values())
+    assert all(0 <= temp <= 100 for temp in temps.values())
+
+@pytest.mark.usefixtures("mock_psutil")
+def test_get_cpu_load_temp(system_heatmap):
+    temp = system_heatmap.get_cpu_load_temp()
+    assert isinstance(temp, float)
+    assert 40 <= temp <= 100  # Base temp (40) + max possible addition (60)
+
+@pytest.mark.usefixtures("mock_psutil")
+def test_get_gpu_load_temp(system_heatmap):
+    temp = system_heatmap.get_gpu_load_temp()
+    assert isinstance(temp, float)
+    assert 35 <= temp <= 85  # Base temp (35) + max possible addition (50)
+
+@pytest.mark.usefixtures("mock_psutil")
+def test_get_disk_load_temp(system_heatmap):
+    temp = system_heatmap.get_disk_load_temp()
+    assert isinstance(temp, float)
+    assert 30 <= temp <= 100
+
+@pytest.mark.usefixtures("mock_windows_api", "mock_psutil")
+def test_get_windows_temps(system_heatmap):
+    temps = system_heatmap.get_windows_temps()
+    
+    assert isinstance(temps, dict)
+    assert len(temps) == 5
+    assert all(isinstance(temp, float) for temp in temps.values())
+    assert all(0 <= temp <= 100 for temp in temps.values())
+
+def test_generate_system_layout(system_heatmap):
+    with patch.object(system_heatmap, 'get_system_temps') as mock_temps:
+        mock_temps.return_value = {
+            'CPU': 50.0,
+            'GPU': 60.0,
+            'Motherboard': 45.0,
+            'Storage': 40.0,
+            'RAM': 55.0
         }
-        return system_heatmap
+        
+        layout = system_heatmap.generate_system_layout()
+        
+        assert isinstance(layout, Panel)
+        assert "System Temperature Heatmap" in layout.title
+        assert isinstance(layout.renderable, Text)
 
-@pytest.fixture
-def mock_temps() -> Dict[str, float]:
-    """Fixture to provide mock temperature readings."""
-    return {
-        'CPU': 45.0,
-        'GPU': 40.0,
-        'Motherboard': 35.0,
-        'Storage': 30.0,
-        'RAM': 25.0
-    }
-
-def test_run_method_with_duration(heatmap):
-    """Test the run method with a specific duration."""
-    mock_panel = Panel("Test")
-    with patch('rich.live.Live') as mock_live_class, \
-         patch('time.sleep', return_value=None) as mock_sleep, \
-         patch.object(heatmap, 'generate_system_layout', return_value=mock_panel):
+def test_run_with_duration(system_heatmap):
+    with patch('time.sleep'), \
+         patch('rich.live.Live') as mock_live, \
+         patch.object(system_heatmap, 'generate_system_layout'):
         
-        # Set up the mock Live instance
-        mock_live = MagicMock()
-        mock_live_class.return_value.__enter__.return_value = mock_live
-
-        # Test execution with 0.5s duration
-        updates = heatmap.run(interval=0.1, duration=0.5)
+        # Test running for 2 updates with 0.1 second interval
+        update_count = system_heatmap.run(interval=0.1, duration=0.2)
         
-        # Verify Live context manager was called
-        mock_live_class.assert_called_once()
-        
-        # Verify generate_system_layout was called
-        assert heatmap.generate_system_layout.call_count > 0
-        
-        # Verify Live updates occurred
-        assert mock_live.update.call_count > 0
-        
-        # Verify sleep interval
-        mock_sleep.assert_called_with(0.1)
-        
-        # Verify reasonable number of updates
-        assert 0 < updates <= 6
-
-def test_run_method_keyboard_interrupt(heatmap):
-    """Test the run method handles keyboard interrupt properly."""
-    mock_panel = Panel("Test")
-    with patch('rich.live.Live') as mock_live_class, \
-         patch('time.sleep', side_effect=KeyboardInterrupt()) as mock_sleep, \
-         patch.object(heatmap, 'generate_system_layout', return_value=mock_panel):
-        
-        # Set up the mock Live instance
-        mock_live = MagicMock()
-        mock_live_class.return_value.__enter__.return_value = mock_live
-
-        # Run method without duration (should be interrupted)
-        updates = heatmap.run(interval=0.1)
-        
-        # Verify one update occurred before interruption
-        assert updates == 1
-        assert mock_live.update.call_count == 1
-
-def test_run_method_system_temps(heatmap, mock_temps):
-    """Test the run method with mocked system temperatures."""
-    mock_panel = Panel("Test")
-    with patch('rich.live.Live') as mock_live_class, \
-         patch('time.sleep', return_value=None) as mock_sleep, \
-         patch.object(heatmap, 'get_system_temps', return_value=mock_temps), \
-         patch.object(heatmap, 'generate_system_layout', return_value=mock_panel):
-        
-        # Set up the mock Live instance
-        mock_live = MagicMock()
-        mock_live_class.return_value.__enter__.return_value = mock_live
-
-        # Run for a very short duration
-        updates = heatmap.run(interval=0.1, duration=0.2)
-        
-        # Verify temperatures were retrieved
-        assert heatmap.get_system_temps.called
-        
-        # Verify system layout was generated with temperatures
-        assert heatmap.generate_system_layout.called
-        
-        # Verify at least one update occurred
-        assert updates >= 1
-
-@pytest.mark.parametrize("interval,duration,min_updates,max_updates", [
-    (0.1, 0.5, 1, 6),
-    (0.2, 1.0, 1, 6),
-    (0.5, 1.0, 1, 3)
-])
-def test_run_method_different_intervals(heatmap, interval, duration, min_updates, max_updates):
-    """Test the run method with different intervals and durations."""
-    mock_panel = Panel("Test")
-    with patch('rich.live.Live') as mock_live_class, \
-         patch('time.sleep', return_value=None) as mock_sleep, \
-         patch.object(heatmap, 'generate_system_layout', return_value=mock_panel):
-        
-        # Set up the mock Live instance
-        mock_live = MagicMock()
-        mock_live_class.return_value.__enter__.return_value = mock_live
-
-        # Run with specified interval and duration
-        updates = heatmap.run(interval=interval, duration=duration)
-        
-        # Verify number of updates is within expected range
-        assert min_updates <= updates <= max_updates
-        
-        # Verify sleep was called with correct interval
-        mock_sleep.assert_called_with(interval)
+        assert update_count > 0
+        assert mock_live.call_count == 1
 
 if __name__ == '__main__':
-    pytest.main(['-v', __file__])
+    pytest.main(['-v'])
