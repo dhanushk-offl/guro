@@ -55,7 +55,7 @@ def test_run_method(heatmap):
             raise KeyboardInterrupt()
 
     mock_live = MagicMock()
-    mock_live.update = mock_update
+    mock_live.update.side_effect = mock_update
 
     with patch('rich.live.Live', return_value=mock_live) as mock_live_class, \
          patch('time.sleep', return_value=None) as mock_sleep, \
