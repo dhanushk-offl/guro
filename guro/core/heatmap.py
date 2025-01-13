@@ -89,7 +89,7 @@ class SystemHeatmap:
             buffer = ctypes.create_string_buffer(buffer_size)
             if self.CallNtPowerInformation(11, None, 0, buffer, buffer_size) == 0:
                 info = PROCESSOR_POWER_INFORMATION.from_buffer_copy(buffer)
-                return 40 + (info.CurrentMhz / info.MaxMhz) * 40
+                return float(40 + (info.CurrentMhz / max(info.MaxMhz, 1)) * 40)  # Fixed division by zero
             return self.get_cpu_load_temp()
         except:
             return self.get_cpu_load_temp()
@@ -115,7 +115,7 @@ class SystemHeatmap:
         try:
             status = SYSTEM_POWER_STATUS()
             if self.GetSystemPowerStatus(byref(status)):
-                return 35 + (status.BatteryLifePercent / 100) * 15
+                return float(35 + (status.BatteryLifePercent / 100) * 15)  # Fixed type conversion
             return 45.0
         except:
             return 45.0
@@ -142,7 +142,7 @@ class SystemHeatmap:
             return 35.0
 
     def get_windows_ram_temp(self) -> float:
-        return psutil.virtual_memory().percent / 2
+        return float(psutil.virtual_memory().percent / 2)  # Fixed type conversion
 
     def get_linux_temps(self) -> Dict[str, float]:
         temps = {
@@ -157,7 +157,7 @@ class SystemHeatmap:
             # CPU Temperature
             cpu_temps = psutil.sensors_temperatures()
             if 'coretemp' in cpu_temps:
-                temps['CPU'] = max(temp.current for temp in cpu_temps['coretemp'])
+                temps['CPU'] = float(max(temp.current for temp in cpu_temps['coretemp']))
             
             # GPU Temperature
             try:
@@ -178,7 +178,7 @@ class SystemHeatmap:
             
             # Motherboard Temperature
             if 'acpitz' in cpu_temps:
-                temps['Motherboard'] = cpu_temps['acpitz'][0].current
+                temps['Motherboard'] = float(cpu_temps['acpitz'][0].current)
             
             # Storage Temperature
             try:
@@ -190,20 +190,14 @@ class SystemHeatmap:
             except:
                 temps['Storage'] = self.get_disk_load_temp()
             
-            temps['RAM'] = psutil.virtual_memory().percent / 2
+            temps['RAM'] = float(psutil.virtual_memory().percent / 2)
             
             return temps
         except:
             return self.get_fallback_temps()
 
     def get_macos_temps(self) -> Dict[str, float]:
-        temps = {
-            'CPU': 0.0,
-            'GPU': 0.0,
-            'Motherboard': 0.0,
-            'Storage': 0.0,
-            'RAM': 0.0
-        }
+        temps = self.get_fallback_temps()  # Start with fallback temperatures
         
         try:
             # SMC temperature readings
@@ -218,8 +212,8 @@ class SystemHeatmap:
                 elif 'GPU die temperature' in line:
                     temps['GPU'] = float(line.split(':')[1].split()[0])
             
-            temps['Motherboard'] = temps['CPU'] * 0.8
-            temps['RAM'] = psutil.virtual_memory().percent / 2
+            temps['Motherboard'] = float(temps['CPU'] * 0.8)
+            temps['RAM'] = float(psutil.virtual_memory().percent / 2)
             
             try:
                 output = subprocess.check_output(['smartctl', '-A', '/dev/disk0']).decode()
@@ -232,29 +226,29 @@ class SystemHeatmap:
             
             return temps
         except:
-            return self.get_fallback_temps()
+            return temps  # Return the fallback temps if anything fails
 
     def get_cpu_load_temp(self) -> float:
-        return 40 + (psutil.cpu_percent() * 0.6)
+        return float(40 + (psutil.cpu_percent() * 0.6))
 
     def get_gpu_load_temp(self) -> float:
-        return 35 + (psutil.cpu_percent() * 0.5)
+        return float(35 + (psutil.cpu_percent() * 0.5))
 
     def get_disk_load_temp(self) -> float:
         disk_io = psutil.disk_io_counters()
         if disk_io:
-            return 30 + (disk_io.read_bytes + disk_io.write_bytes) / (1024 * 1024 * 1024)
+            return float(30 + (disk_io.read_bytes + disk_io.write_bytes) / (1024 * 1024 * 1024))
         return 30.0
 
     def get_fallback_temps(self) -> Dict[str, float]:
-        cpu_percent = psutil.cpu_percent()
-        memory_percent = psutil.virtual_memory().percent
+        cpu_percent = float(psutil.cpu_percent())
+        memory_percent = float(psutil.virtual_memory().percent)
         return {
-            'CPU': 40 + (cpu_percent * 0.4),
-            'GPU': 35 + (cpu_percent * 0.3),
-            'Motherboard': 35 + (cpu_percent * 0.2),
-            'Storage': 30 + (cpu_percent * 0.1),
-            'RAM': 30 + (memory_percent * 0.2)
+            'CPU': float(40 + (cpu_percent * 0.4)),
+            'GPU': float(35 + (cpu_percent * 0.3)),
+            'Motherboard': float(35 + (cpu_percent * 0.2)),
+            'Storage': float(30 + (cpu_percent * 0.1)),
+            'RAM': float(30 + (memory_percent * 0.2))
         }
 
     def get_system_temps(self) -> Dict[str, float]:
@@ -276,7 +270,7 @@ class SystemHeatmap:
 
     def update_component_map(self, component: str, temp: float):
         rows, cols = self.components[component]['size']
-        base_temp = temp
+        base_temp = float(temp)  # Ensure temp is float
         noise = np.random.normal(0, 2, (rows, cols))
         self.temp_maps[component] = np.clip(base_temp + noise, 0, 100)
 
@@ -293,7 +287,7 @@ class SystemHeatmap:
             
             for i in range(size_x):
                 for j in range(size_y):
-                    temp = self.temp_maps[component][i, j]
+                    temp = float(self.temp_maps[component][i, j])  # Ensure float conversion
                     char, color = self.get_temp_char(temp)
                     layout[pos_x + i][pos_y + j] = char
                     colors[pos_x + i][pos_y + j] = color
@@ -320,11 +314,13 @@ class SystemHeatmap:
 
     def run(self, interval: float = 1.0, duration: Optional[int] = None):
         start_time = time.time()
+        update_count = 0
         
         with Live(self.generate_system_layout(), refresh_per_second=1) as live:
             try:
                 while True:
                     live.update(self.generate_system_layout())
+                    update_count += 1
                     
                     if duration and (time.time() - start_time) >= duration:
                         break
@@ -332,3 +328,5 @@ class SystemHeatmap:
                     time.sleep(interval)
             except KeyboardInterrupt:
                 pass
+            
+            return update_count  # Return the number of updates for testing purposes
