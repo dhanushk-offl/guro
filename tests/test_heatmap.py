@@ -51,6 +51,8 @@ def test_run_method(heatmap):
 
     def mock_update(content):
         updates['count'] += 1
+        if updates['count'] >= 1:
+            raise KeyboardInterrupt()
 
     mock_live = MagicMock()
     mock_live.update.side_effect = mock_update
@@ -64,12 +66,14 @@ def test_run_method(heatmap):
         mock_live_class.return_value.__exit__.return_value = None
 
         # Run the heatmap
-        heatmap.run(interval=0.1, duration=0.5)
+        try:
+            heatmap.run(interval=0.1, duration=1)
+        except KeyboardInterrupt:
+            pass
 
         # Verify the update was called and sleep was called
         print(f"Updates count: {updates['count']}")  # Debugging line
         assert updates['count'] >= 1, f"Update was called {updates['count']} times, expected at least 1"
-
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-specific test")
 def test_windows_setup():

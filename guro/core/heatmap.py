@@ -318,11 +318,17 @@ class SystemHeatmap:
             border_style="blue"
         )
 
-    def run(self, interval, duration):
-        print("Run method started")  # Debug line
-        with Live(self.generate_system_layout()) as live:
-            start_time = time.time()
-            while time.time() - start_time < duration:
-                live.update(self.generate_system_layout())
-                print("Live updated")  # Debug line
-                time.sleep(interval)
+    def run(self, interval: float = 1.0, duration: Optional[int] = None):
+        start_time = time.time()
+        
+        with Live(self.generate_system_layout(), refresh_per_second=1) as live:
+            try:
+                while True:
+                    live.update(self.generate_system_layout())
+                    
+                    if duration and (time.time() - start_time) >= duration:
+                        break
+                    
+                    time.sleep(interval)
+            except KeyboardInterrupt:
+                pass
