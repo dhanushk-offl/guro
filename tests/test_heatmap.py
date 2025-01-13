@@ -94,37 +94,38 @@ def test_linux_temps(heatmap, mock_temps):
         assert abs(temps['CPU'] - mock_temps['CPU']) < 0.1
         assert abs(temps['Motherboard'] - mock_temps['Motherboard']) < 0.1
 
-@patch('rich.live.Live')
 @patch('time.sleep', return_value=None)
-def test_run_method(mock_sleep, mock_live, heatmap):
+@patch('rich.live.Live')
+def test_run_method(mock_live, mock_sleep, heatmap):
     """Test the run method."""
-    # Create a counter to track updates
-    updates = {'count': 0}
     
-    def fake_update(panel):
+    # Mock the Panel to ensure consistent output
+    mock_panel = Panel("Test")
+    heatmap.generate_system_layout = MagicMock(return_value=mock_panel)
+    
+    # Create a mock Live context manager and instance
+    mock_live_instance = MagicMock()
+    mock_live.return_value = mock_live_instance
+    
+    # Set up the update call to increment counter and raise KeyboardInterrupt
+    updates = {'count': 0}
+    def fake_refresh():
         updates['count'] += 1
         if updates['count'] >= 1:
             raise KeyboardInterrupt()
     
-    # Create a mock Live instance that will call our fake_update
-    mock_live_instance = MagicMock()
-    mock_live_instance.update = fake_update
+    # Configure the mock to call our fake_refresh when refresh() is called
+    mock_live_instance.refresh = fake_refresh
     
-    # Set up the context manager to return our mock instance
-    mock_live.return_value.__enter__.return_value = mock_live_instance
-    
-    # Mock the generate_system_layout method to return a consistent panel
-    mock_panel = Panel("Test")
-    heatmap.generate_system_layout = MagicMock(return_value=mock_panel)
+    # Mock the context manager behavior
+    mock_live_instance.__enter__.return_value = mock_live_instance
+    mock_live_instance.__exit__.return_value = None
     
     # Run the heatmap
-    try:
-        heatmap.run(interval=0.1, duration=1)
-    except KeyboardInterrupt:
-        pass
+    heatmap.run(interval=0.1, duration=1)
     
-    # Verify the update was called and sleep was called
-    assert updates['count'] >= 1, f"Update was called {updates['count']} times, expected at least 1"
+    # Verify the refresh was called and sleep was called
+    assert updates['count'] >= 1, f"Refresh was called {updates['count']} times, expected at least 1"
     mock_sleep.assert_called_with(0.1)
 
 def test_cli_command():
