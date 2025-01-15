@@ -1,2 +1,1 @@
-src/cli/guro   /usr/bin
-src/*          /usr/share/guro
+src/guro/*.py   /usr/lib/python3.10/dist-packages/guro/
