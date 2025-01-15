@@ -10,7 +10,7 @@ import sys
 from typing import Dict, List
 
 # Import your classes
-from src.guro.core.monitor import SystemMonitor, GPUDetector, ASCIIGraph
+from guro.core.monitor import SystemMonitor, GPUDetector, ASCIIGraph
 
 @pytest.fixture
 def monitor():
