@@ -1,13 +1,5 @@
 # Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
-[bold cyan]
-   ██████╗ ██╗   ██╗██████╗  ██████╗ 
-  ██╔════╝ ██║   ██║██╔══██╗██╔═══██╗
-  ██║  ███╗██║   ██║██████╔╝██║   ██║
-  ██║   ██║██║   ██║██╔══██╗██║   ██║
-  ╚██████╔╝╚██████╔╝██║  ██║╚██████╔╝
-   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ 
-[/bold cyan]
 
 Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchmarking**. It’s simple, fast, and designed for developers and enthusiasts who want to monitor system performance, run benchmarks, and visualize system heatmaps in an intuitive way.
 
