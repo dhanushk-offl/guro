@@ -32,7 +32,7 @@ Vcs-Git: https://github.com/dhanushk-offl/guro.git
 Vcs-Browser: https://github.com/dhanushk-offl/guro
 
 Package: guro
-Architecture: all
+Architecture: any
 Depends: ${python3:Depends},
          ${misc:Depends},
          python3-click (>= 8.0.0),
