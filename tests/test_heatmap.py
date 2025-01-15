@@ -8,7 +8,7 @@ from rich.text import Text
 import time
 from pathlib import Path
 from rich.console import Console
-from guro.core.heatmap import SystemHeatmap
+from src.guro.core.heatmap import SystemHeatmap
 
 # Add fixtures for commonly used objects
 @pytest.fixture

@@ -1,5 +1,10 @@
 from setuptools import setup, find_packages
 import sys
+from pathlib import Path
+
+# Read the README.md file for the long description
+current_dir = Path(__file__).parent
+long_description = (current_dir / "README.md").read_text(encoding="utf-8")
 
 common_packages = [
     'click>=8.0.0',
@@ -35,6 +40,7 @@ test_requires = [
 
 setup(
     name="guro",
+    version="0.1.0",
     packages=find_packages(),
     install_requires=common_packages,
     entry_points={

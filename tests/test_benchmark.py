@@ -21,7 +21,7 @@ class TestSafeSystemBenchmark:
     @pytest.fixture
     def benchmark(self):
         """Fixture to create a fresh benchmark instance for each test"""
-        from guro.core.benchmark import SafeSystemBenchmark
+        from src.guro.core.benchmark import SafeSystemBenchmark
         return SafeSystemBenchmark()
 
     def test_initialization(self, benchmark):
