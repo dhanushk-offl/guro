@@ -1,34 +1,58 @@
-# README.md
-# Guro - Advanced System Optimization Toolkit
+# Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
-## Features
-- Real-time system monitoring
-- CPU optimization
-- Memory management
-- System cleaning
-- Performance tuning
+[bold cyan]
+   ██████╗ ██╗   ██╗██████╗  ██████╗ 
+  ██╔════╝ ██║   ██║██╔══██╗██╔═══██╗
+  ██║  ███╗██║   ██║██████╔╝██║   ██║
+  ██║   ██║██║   ██║██╔══██╗██║   ██║
+  ╚██████╔╝╚██████╔╝██║  ██║╚██████╔╝
+   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ 
+[/bold cyan]
 
-## Installation
+Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchmarking**. It’s simple, fast, and designed for developers and enthusiasts who want to monitor system performance, run benchmarks, and visualize system heatmaps in an intuitive way.
+
+### Features:
+- 📊 **Real-time system monitoring** – Monitor CPU, memory, and disk usage in real-time.
+- 🔥 **Performance benchmarking** – Run benchmarks with mini and full-scale tests for your CPU and GPU.
+- 🌡️ **Hardware heatmap** – Visualize your system's temperature with a heatmap in real-time.
+- 💾 **Export data** – Export monitoring data to CSV for analysis.
+  
+### Installation
+
 ```bash
 pip install guro
 ```
 
-## Usage
+### Usage
+
+Run the following commands for monitoring, benchmarking, or heatmap analysis:
+
+#### 1. **Monitor System Resources**
 ```bash
-guro --help        # Show commands
-guro monitor       # Monitor system
-guro optimize      # Optimize system
-guro about         # Show info
+guro monitor --interval 1.0 --duration 60
 ```
 
-## Development
+#### 2. **Run Benchmark Tests**
 ```bash
-git clone https://github.com/dhanushk-offl/guro.git
-cd guro
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+guro benchmark --type mini --cpu-only
 ```
 
-## License
-MIT
+#### 3. **Visualize System Heatmap**
+```bash
+guro heatmap --interval 1.0 --duration 30
+```
+
+#### 4. **List All Commands**
+```bash
+guro list
+```
+
+For more details, check out our [documentation](https://github.com/dhanushk-offl/guro/wiki).
+
+### Demo
+
+[Watch the demo video here](https://www.youtube.com/watch?v=xyz123)
+
+### License
+
+MIT License. See LICENSE for more details.
