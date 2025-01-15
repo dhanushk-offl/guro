@@ -11,7 +11,6 @@ import subprocess
 from pathlib import Path
 import ctypes
 from ctypes import Structure
-import click
 import os
 
 # Import platform-specific modules
