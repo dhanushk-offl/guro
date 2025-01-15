@@ -1,0 +1,110 @@
+Metadata-Version: 2.2
+Name: guro
+Version: 0.1.0
+Summary: A Simple System Monitoring & Benchmarking Toolkit
+Home-page: https://github.com/dhanushk-offl/guro
+Author: Dhanush Kandhan
+Author-email: Dhanush Kandhan
+Project-URL: Bug Reports, https://github.com/dhanushk-offl/guro/issues
+Project-URL: Source, https://github.com/dhanushk-offl/guro
+Project-URL: Documentation, https://github.com/dhanushk-offl/guro/wiki
+Keywords: system-monitoring,gpu-optimization,performance-tuning,hardware-monitoring,system-administration,nvidia-gpu,amd-gpu,intel-gpu,resource-monitoring,system-optimization
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Topic :: System :: Hardware
+Classifier: Topic :: System :: Monitoring
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: System :: Operating System
+Classifier: Topic :: System :: Hardware :: Hardware Drivers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Intended Audience :: System Administrators
+Classifier: Intended Audience :: Developers
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Natural Language :: English
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.0.0
+Requires-Dist: rich>=10.0.0
+Requires-Dist: psutil>=5.8.0
+Requires-Dist: gputil>=1.4.0
+Requires-Dist: matplotlib>=3.5.0
+Requires-Dist: nvidia-ml-py>=11.515.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: plotly>=5.5.0
+Requires-Dist: termcolor>=2.0.0
+Requires-Dist: tabulate>=0.8.9
+Requires-Dist: py-cpuinfo>=8.0.0
+Requires-Dist: setproctitle>=1.2.2
+Requires-Dist: keyboard>=0.13.5
+Requires-Dist: pytest>=7.0.0
+Requires-Dist: pytest-mock>=3.10.0
+Requires-Dist: pytest-cov>=4.0.0
+Requires-Dist: pytest-timeout>=2.1.0
+Provides-Extra: nvidia
+Requires-Dist: py3nvml>=0.2.7; extra == "nvidia"
+Requires-Dist: nvidia-ml-py>=11.515.0; extra == "nvidia"
+Provides-Extra: amd
+Requires-Dist: pyamdgpuinfo>=2.1.0; extra == "amd"
+Provides-Extra: all
+Requires-Dist: py3nvml>=0.2.7; extra == "all"
+Requires-Dist: nvidia-ml-py>=11.515.0; extra == "all"
+Requires-Dist: pyamdgpuinfo>=2.1.0; extra == "all"
+Requires-Dist: matplotlib>=3.5.0; extra == "all"
+Requires-Dist: plotly>=5.5.0; extra == "all"
+Provides-Extra: test
+Requires-Dist: pytest>=7.0.0; extra == "test"
+Requires-Dist: pytest-mock>=3.10.0; extra == "test"
+Requires-Dist: pytest-cov>=4.0.0; extra == "test"
+Requires-Dist: pytest-timeout>=2.1.0; extra == "test"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# README.md
+# Guro - Advanced System Optimization Toolkit
+
+## Features
+- Real-time system monitoring
+- CPU optimization
+- Memory management
+- System cleaning
+- Performance tuning
+
+## Installation
+```bash
+pip install guro
+```
+
+## Usage
+```bash
+guro --help        # Show commands
+guro monitor       # Monitor system
+guro optimize      # Optimize system
+guro about         # Show info
+```
+
+## Development
+```bash
+git clone https://github.com/dhanushk-offl/guro.git
+cd guro
+python -m venv venv
+source venv/bin/activate
+pip install -e .
+```
+
+## License
+MIT

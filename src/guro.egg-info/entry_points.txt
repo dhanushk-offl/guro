@@ -1,0 +1,2 @@
+[console_scripts]
+guro = guro.cli.main:cli
