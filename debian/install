@@ -1,2 +1,2 @@
-guro usr/bin
-src/* /usr/share/guro
+guro              /usr/bin
+src/*             /usr/share/guro
