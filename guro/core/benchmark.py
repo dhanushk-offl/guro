@@ -233,19 +233,20 @@ class SafeSystemBenchmark:
         
         # System Information
         result_text += "[green]System Information:[/green]\n"
-        sys_info = self.results['system_info']
-        result_text += f"• System: {sys_info['system']}\n"
-        result_text += f"• Processor: {sys_info['processor']}\n"
-        result_text += f"• CPU Cores: {sys_info['cpu_cores']}\n"
-        result_text += f"• CPU Threads: {sys_info['cpu_threads']}\n"
+        sys_info = self.results.get('system_info', {})
+        result_text += f"• System: {sys_info.get('system', 'N/A')}\n"
+        result_text += f"• Processor: {sys_info.get('processor', 'N/A')}\n"
+        result_text += f"• CPU Cores: {sys_info.get('cpu_cores', 'N/A')}\n"
+        result_text += f"• CPU Threads: {sys_info.get('cpu_threads', 'N/A')}\n"
         
         # GPU Information
-        if sys_info['gpu']['available']:
-            gpu_info = sys_info['gpu']['info']
-            result_text += f"• GPU: {gpu_info['name']}\n"
-            result_text += f"• GPU Count: {gpu_info['count']}\n"
-            result_text += f"• GPU Memory: {gpu_info['memory_total']} MB\n"
-            result_text += f"• Driver Version: {gpu_info['driver_version']}\n"
+        gpu_info = sys_info.get('gpu', {})
+        if gpu_info.get('available', False):
+            gpu_details = gpu_info.get('info', {})
+            result_text += f"• GPU: {gpu_details.get('name', 'N/A')}\n"
+            result_text += f"• GPU Count: {gpu_details.get('count', 'N/A')}\n"
+            result_text += f"• GPU Memory: {gpu_details.get('memory_total', 'N/A')} MB\n"
+            result_text += f"• Driver Version: {gpu_details.get('driver_version', 'N/A')}\n"
         else:
             result_text += "• GPU: Not Available\n"
         
@@ -253,27 +254,31 @@ class SafeSystemBenchmark:
         
         # CPU Results
         if 'cpu' in self.results:
-            result_text += f"• Average CPU Load: {np.mean(self.results['cpu']['loads']):.2f}%\n"
-            result_text += f"• Peak CPU Load: {max(self.results['cpu']['loads']):.2f}%\n"
+            cpu_loads = self.results['cpu'].get('loads', [])
+            if cpu_loads:
+                result_text += f"• Average CPU Load: {np.mean(cpu_loads):.2f}%\n"
+                result_text += f"• Peak CPU Load: {max(cpu_loads):.2f}%\n"
             
         # Memory Results
         if 'memory' in self.results:
-            result_text += f"• Average Memory Usage: {np.mean(self.results['memory']['usage']):.2f}%\n"
-            result_text += f"• Peak Memory Usage: {max(self.results['memory']['usage']):.2f}%\n"
+            memory_usage = self.results['memory'].get('usage', [])
+            if memory_usage:
+                result_text += f"• Average Memory Usage: {np.mean(memory_usage):.2f}%\n"
+                result_text += f"• Peak Memory Usage: {max(memory_usage):.2f}%\n"
             
         # GPU Results
         if 'gpu' in self.results and 'error' not in self.results['gpu']:
-            loads = self.results['gpu']['loads']
-            if loads:
-                result_text += f"• Average GPU Load: {np.mean(loads):.2f}%\n"
-                result_text += f"• Peak GPU Load: {max(loads):.2f}%\n"
+            gpu_loads = self.results['gpu'].get('loads', [])
+            if gpu_loads:
+                result_text += f"• Average GPU Load: {np.mean(gpu_loads):.2f}%\n"
+                result_text += f"• Peak GPU Load: {max(gpu_loads):.2f}%\n"
                 if 'memory_usage' in self.results['gpu']:
-                    mem_usage = self.results['gpu']['memory_usage']
-                    if mem_usage:
-                        result_text += f"• Average GPU Memory Usage: {np.mean(mem_usage):.2f} MB\n"
-                        result_text += f"• Peak GPU Memory Usage: {max(mem_usage):.2f} MB\n"
+                    gpu_mem_usage = self.results['gpu'].get('memory_usage', [])
+                    if gpu_mem_usage:
+                        result_text += f"• Average GPU Memory Usage: {np.mean(gpu_mem_usage):.2f} MB\n"
+                        result_text += f"• Peak GPU Memory Usage: {max(gpu_mem_usage):.2f} MB\n"
                 
-        result_text += f"• Test Duration: {self.results['duration']} seconds\n"
+        result_text += f"• Test Duration: {self.results.get('duration', 'N/A')} seconds\n"
 
         self.console.print(Panel(
             result_text,
