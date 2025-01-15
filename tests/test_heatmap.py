@@ -83,10 +83,10 @@ def test_system_layout_generation(heatmap):
     (0.5, 2),  # Faster updates
     (2.0, 4),  # Slower updates
 ])
-def test_heatmap_run_duration(heatmap, interval, duration):
+def test_heatmap_run_duration(heatmap, mock_system_temps, interval, duration):
     start_time = time.time()
     
-    with patch.object(heatmap, 'get_system_temps', return_value=mock_system_temps()):
+    with patch.object(heatmap, 'get_system_temps', return_value=mock_system_temps):
         update_count = heatmap.run(interval=interval, duration=duration)
     
     elapsed_time = time.time() - start_time
@@ -122,7 +122,7 @@ def test_invalid_inputs(heatmap, invalid_input, expected_error):
 @pytest.fixture(autouse=True)
 def cleanup():
     yield
-    # Add any cleanup code here if needed
+    
 
 if __name__ == '__main__':
     pytest.main(['-v', __file__])
