@@ -13,7 +13,7 @@ import subprocess
 from typing import Dict, List, Optional
 import shutil
 from rich import box
-import click
+# import click
 import csv
 
 class GPUDetector:
@@ -297,7 +297,7 @@ class SystemMonitor:
             self.export_monitoring_data()
             self.console.print("\n[green]Monitoring data exported to 'monitoring_data.csv'[/green]")
 
-@click.group()
-def cli():
-    """🖥️ System Performance Monitor CLI"""
-    pass
+# @click.group()
+# def cli():
+#     """🖥️ System Performance Monitor CLI"""
+#     pass
