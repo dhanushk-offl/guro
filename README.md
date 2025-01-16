@@ -1,4 +1,6 @@
 [![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml)
+<a href="https://www.buymeacoffee.com/itzmedhanu"><br><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=itzmedhanu&button_colour=40DCA5&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a>
+
 # Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
 Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchmarking**. It’s simple, fast, and designed for developers and enthusiasts who want to monitor system performance, run benchmarks, and visualize system heatmaps in an intuitive way.
