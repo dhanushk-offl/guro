@@ -1,3 +1,4 @@
+[![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml)
 # Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
 
