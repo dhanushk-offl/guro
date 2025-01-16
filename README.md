@@ -1,5 +1,4 @@
 [![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml)
-<a href="https://www.buymeacoffee.com/itzmedhanu"><br><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=itzmedhanu&button_colour=40DCA5&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a>
 
 # Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
@@ -78,3 +77,6 @@ guro about
 MIT License. See [[LICENSE](https://github.com/dhanushk-offl/guro/LICENSE)] for more details.
 
 For more details, check out our [[documentation](https://github.com/dhanushk-offl/guro/wiki)].
+
+<a href="https://www.buymeacoffee.com/itzmedhanu"><br><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=itzmedhanu&button_colour=40DCA5&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a>
+
