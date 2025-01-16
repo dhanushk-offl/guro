@@ -1,0 +1,13 @@
+# Python build artifacts
+*.pyc
+*.pyo
+__pycache__/
+
+# Distribution and build directories
+dist/
+build/
+*.egg-info/
+
+# IDE-specific files
+.vscode/
+.idea/

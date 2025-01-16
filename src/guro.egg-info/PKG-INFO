@@ -1,10 +1,10 @@
-Metadata-Version: 2.2
+Metadata-Version: 2.1
 Name: guro
 Version: 0.1.0
 Summary: A Simple System Monitoring & Benchmarking Toolkit
 Home-page: https://github.com/dhanushk-offl/guro
 Author: Dhanush Kandhan
-Author-email: Dhanush Kandhan
+Author-email: dhanushkandhan75@gmail.com
 Project-URL: Bug Reports, https://github.com/dhanushk-offl/guro/issues
 Project-URL: Source, https://github.com/dhanushk-offl/guro
 Project-URL: Documentation, https://github.com/dhanushk-offl/guro/wiki
@@ -27,84 +27,59 @@ Classifier: Environment :: Console
 Classifier: Natural Language :: English
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
-License-File: LICENSE
-Requires-Dist: click>=8.0.0
-Requires-Dist: rich>=10.0.0
-Requires-Dist: psutil>=5.8.0
-Requires-Dist: gputil>=1.4.0
-Requires-Dist: matplotlib>=3.5.0
-Requires-Dist: nvidia-ml-py>=11.515.0
-Requires-Dist: pandas>=1.3.0
-Requires-Dist: plotly>=5.5.0
-Requires-Dist: termcolor>=2.0.0
-Requires-Dist: tabulate>=0.8.9
-Requires-Dist: py-cpuinfo>=8.0.0
-Requires-Dist: setproctitle>=1.2.2
-Requires-Dist: keyboard>=0.13.5
-Requires-Dist: pytest>=7.0.0
-Requires-Dist: pytest-mock>=3.10.0
-Requires-Dist: pytest-cov>=4.0.0
-Requires-Dist: pytest-timeout>=2.1.0
 Provides-Extra: nvidia
-Requires-Dist: py3nvml>=0.2.7; extra == "nvidia"
-Requires-Dist: nvidia-ml-py>=11.515.0; extra == "nvidia"
 Provides-Extra: amd
-Requires-Dist: pyamdgpuinfo>=2.1.0; extra == "amd"
 Provides-Extra: all
-Requires-Dist: py3nvml>=0.2.7; extra == "all"
-Requires-Dist: nvidia-ml-py>=11.515.0; extra == "all"
-Requires-Dist: pyamdgpuinfo>=2.1.0; extra == "all"
-Requires-Dist: matplotlib>=3.5.0; extra == "all"
-Requires-Dist: plotly>=5.5.0; extra == "all"
 Provides-Extra: test
-Requires-Dist: pytest>=7.0.0; extra == "test"
-Requires-Dist: pytest-mock>=3.10.0; extra == "test"
-Requires-Dist: pytest-cov>=4.0.0; extra == "test"
-Requires-Dist: pytest-timeout>=2.1.0; extra == "test"
-Dynamic: author
-Dynamic: author-email
-Dynamic: classifier
-Dynamic: description
-Dynamic: description-content-type
-Dynamic: home-page
-Dynamic: keywords
-Dynamic: project-url
-Dynamic: provides-extra
-Dynamic: requires-dist
-Dynamic: requires-python
-Dynamic: summary
+License-File: LICENSE
 
-# README.md
-# Guro - Advanced System Optimization Toolkit
+# Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
-## Features
-- Real-time system monitoring
-- CPU optimization
-- Memory management
-- System cleaning
-- Performance tuning
 
-## Installation
+Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchmarking**. It’s simple, fast, and designed for developers and enthusiasts who want to monitor system performance, run benchmarks, and visualize system heatmaps in an intuitive way.
+
+### Features:
+- 📊 **Real-time system monitoring** – Monitor CPU, memory, and disk usage in real-time.
+- 🔥 **Performance benchmarking** – Run benchmarks with mini and full-scale tests for your CPU and GPU.
+- 🌡️ **Hardware heatmap** – Visualize your system's temperature with a heatmap in real-time.
+- 💾 **Export data** – Export monitoring data to CSV for analysis.
+  
+### Installation
+
 ```bash
 pip install guro
 ```
 
-## Usage
+### Usage
+
+Run the following commands for monitoring, benchmarking, or heatmap analysis:
+
+#### 1. **Monitor System Resources**
 ```bash
-guro --help        # Show commands
-guro monitor       # Monitor system
-guro optimize      # Optimize system
-guro about         # Show info
+guro monitor --interval 1.0 --duration 60
 ```
 
-## Development
+#### 2. **Run Benchmark Tests**
 ```bash
-git clone https://github.com/dhanushk-offl/guro.git
-cd guro
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+guro benchmark --type mini --cpu-only
 ```
 
-## License
-MIT
+#### 3. **Visualize System Heatmap**
+```bash
+guro heatmap --interval 1.0 --duration 30
+```
+
+#### 4. **List All Commands**
+```bash
+guro list
+```
+
+For more details, check out our [documentation](https://github.com/dhanushk-offl/guro/wiki).
+
+### Demo
+
+[Watch the demo video here](https://www.youtube.com/watch?v=xyz123)
+
+### License
+
+MIT License. See LICENSE for more details.
