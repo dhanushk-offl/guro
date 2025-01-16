@@ -12,7 +12,7 @@ Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchm
 ### Installation
 
 ```bash
-pip install guro
+pipx install guro
 ```
 
 ### Usage
