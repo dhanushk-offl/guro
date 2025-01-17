@@ -9,6 +9,7 @@ Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchm
 - 🔥 **Performance benchmarking** – Run benchmarks with mini and full-scale tests for your CPU and GPU.
 - 🌡️ **Hardware heatmap** – Visualize your system's temperature with a heatmap in real-time.
 - 💾 **Export data** – Export monitoring data to CSV for analysis.
+- 📶 **Network traffic monitoring** – Monitor real-time network traffic, including bytes and packets sent/received.
 
 ### Installation
 
@@ -17,7 +18,7 @@ For General Installation:
 pip install guro
 ```
 
-For **Linux** & **MacOS** users, we recommend installing via `pipx` for better isolation or use can virtual environments:
+For **Linux** & **MacOS** users, we recommend installing via `pipx` for better isolation or using virtual environments:
 ```bash
 pipx install guro
 ```
@@ -59,18 +60,27 @@ guro heatmap --interval 1.0 --duration 30
   - `--interval/-i`: Update interval in seconds (must be greater than 0.1).
   - `--duration/-d`: Duration to run in seconds (default: 10).
 
-#### 4. **List All Commands**
+#### 4. **Monitor Network Traffic**
+```bash
+guro net-monitor --interval 1.0 --duration 60
+```
+- **Options**:
+  - `--interval/-i`: Monitoring interval in seconds (default: 1.0).
+  - `--duration/-d`: Monitoring duration in seconds (default: unlimited).
+
+Monitor network traffic, including bytes sent and received, as well as packets transmitted and received, in real-time.
+
+#### 5. **List All Commands**
 ```bash
 guro list
 ```
 - Displays all available commands and options for the toolkit.
 
-#### 5. **About Guro**
+#### 6. **About Guro**
 ```bash
 guro about
 ```
 - Displays information about Guro, including version, author, and features.
-
 
 ### License
 
@@ -79,4 +89,3 @@ MIT License. See [[LICENSE](https://github.com/dhanushk-offl/guro/LICENSE)] for 
 For more details, check out our [[documentation](https://github.com/dhanushk-offl/guro/wiki)].
 
 <a href="https://www.buymeacoffee.com/itzmedhanu"><br><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=itzmedhanu&button_colour=40DCA5&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a>
-
