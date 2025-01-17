@@ -62,7 +62,7 @@ guro heatmap --interval 1.0 --duration 30
 
 #### 4. **Monitor Network Traffic**
 ```bash
-guro net-monitor --interval 1.0 --duration 10
+guro net-monitor --interval 1.0 --duration 60
 ```
 - **Options**:
   - `--interval/-i`: Monitoring interval in seconds (default: 1.0).
@@ -81,6 +81,13 @@ guro list
 guro about
 ```
 - Displays information about Guro, including version, author, and features.
+
+### Note
+If the `guro net-monitor` command does not work, try running:
+```bash
+pip install -e .
+```
+Then, rerun the command.
 
 ### License
 
