@@ -1,5 +1,6 @@
-[![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dhanushk-offl/guro/badge)](https://scorecard.dev/viewer/?uri=github.com/dhanushk-offl/guro) [![CodeQL Advanced](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml) [![PyPI Downloads](https://img.shields.io/pypi/dm/guro.svg?label=PyPI%20downloads)](
-https://pypi.org/project/guro/)
+[![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dhanushk-offl/guro/badge)](https://scorecard.dev/viewer/?uri=github.com/dhanushk-offl/guro) [![CodeQL Advanced](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml) [![PyPI Downloads](https://img.shields.io/pypi/dm/guro.svg?label=PyPI%20downloads)](https://pypi.org/project/guro/)
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/itzmedhanu)
 
 # Guro - A Simple System Monitoring & Benchmarking Toolkit 🚀
 
@@ -78,6 +79,3 @@ guro about
 MIT License. See [[LICENSE](https://github.com/dhanushk-offl/guro/LICENSE)] for more details.
 
 For more details, check out our [[documentation](https://github.com/dhanushk-offl/guro/wiki)].
-
-<a href="https://www.buymeacoffee.com/itzmedhanu"><br><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=itzmedhanu&button_colour=40DCA5&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a>
-
