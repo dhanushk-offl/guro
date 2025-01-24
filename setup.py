@@ -35,7 +35,7 @@ test_requires = [
 
 setup(
     name="guro",
-    version="1.0.2",
+    version="1.0.3",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=common_packages,
