@@ -140,7 +140,7 @@ def about():
     """ℹ️  Display information about Guro"""
     about_text = """[bold cyan]Guro - A Simple System Monitoring & Benchmarking Toolkit[/bold cyan]
         
-[green]Version:[/green] 1.0.0
+[green]Version:[/green] 1.0.3
 [green]Author:[/green] Dhanush Kandhan
 [green]License:[/green] MIT
         
@@ -148,7 +148,7 @@ def about():
 
 [yellow]Key Features:[/yellow]
 • 📊 Real-time system monitoring
-• 💾 Memory management
+• 💅 Catchy CL Interface
 • 🔥 Performance benchmarking
 • 🌡️ Hardware Heatmap Analysis
 
