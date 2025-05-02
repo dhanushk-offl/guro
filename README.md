@@ -12,6 +12,47 @@ Welcome to **Guro**, the ultimate toolkit for **system monitoring** and **benchm
 - 🔥 **Performance benchmarking** – Run benchmarks with mini and full-scale tests for your CPU and GPU.
 - 🌡️ **Hardware heatmap** – Visualize your system's temperature with a heatmap in real-time.
 - 💾 **Export data** – Export monitoring data to CSV for analysis.
+flowchart TD
+    %% User Input Layer
+    CLI["CLI Interface"]:::cli
+
+    %% Core Modules
+    subgraph "Core Modules"
+        MON["Monitor Module"]:::core
+        BEN["Benchmark Module"]:::core
+        HMAP["Heatmap Module"]:::core
+        EXPORT["Data Export"]:::export
+    end
+
+    %% External Systems
+    subgraph "External Systems"
+        OS["OS APIs"]:::external
+        FS["File System"]:::external
+    end
+
+    %% Connections from CLI to Core Modules
+    CLI -->|"trigger_monitor"| MON
+    CLI -->|"trigger_benchmark"| BEN
+    CLI -->|"trigger_heatmap"| HMAP
+
+    %% Connections within Core Modules and External Systems
+    MON -->|"collect_metrics"| OS
+    MON -->|"export_data"| EXPORT
+    EXPORT -->|"write_output"| FS
+    BEN -->|"run_benchmarks"| OS
+    HMAP -->|"generate_visual"| FS
+
+    %% Click Events for Components
+    click CLI "https://github.com/dhanushk-offl/guro/blob/master/src/guro/cli/main.py"
+    click MON "https://github.com/dhanushk-offl/guro/blob/master/src/guro/core/monitor.py"
+    click BEN "https://github.com/dhanushk-offl/guro/blob/master/src/guro/core/benchmark.py"
+    click HMAP "https://github.com/dhanushk-offl/guro/blob/master/src/guro/core/heatmap.py"
+
+    %% Styles
+    classDef cli fill:#ffcccc,stroke:#990000,stroke-width:2px;
+    classDef core fill:#cce5ff,stroke:#004085,stroke-width:2px;
+    classDef export fill:#d4edda,stroke:#155724,stroke-width:2px;
+    classDef external fill:#e2f0d9,stroke:#0b6623,stroke-width:2px;
 
 ### Installation
 
