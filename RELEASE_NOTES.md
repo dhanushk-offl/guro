@@ -1,5 +1,10 @@
 # Guro Release Notes 🚀
 
+## v1.1.3 - Release Updates
+*February 04, 2026*
+
+This version includes minor version updates and configuration synchronizations.
+
 ## v1.1.2 - The "Cult & Classic" Dashboard Release
 *February 04, 2026*
 

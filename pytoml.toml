@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "guro"
-version = "1.1.2"
+version = "1.1.3"
 description = "A System Tool-kit for Real-time Monitoring and Analysis"
 readme = "README.md"
 long-description-content-type = "text/markdown"

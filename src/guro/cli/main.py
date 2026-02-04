@@ -27,7 +27,7 @@ def print_banner():
     console.print(banner)
 
 @click.group()
-@click.version_option(version='1.1.2')
+@click.version_option(version='1.1.3')
 def cli():
     """🚀 Guro - A Simple System Monitoring & Benchmarking Toolkit"""
     print_banner()
@@ -173,7 +173,7 @@ def about():
     """ℹ️  Display information about Guro"""
     about_text = """[bold cyan]Guro - A Simple System Monitoring & Benchmarking Toolkit[/bold cyan]
         
-[green]Version:[/green] 1.1.2
+[green]Version:[/green] 1.1.3
 [green]Author:[/green] Dhanush Kandhan
 [green]License:[/green] MIT
         
