@@ -1,64 +1,49 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by third parties and governed by their own terms.
-
 name: Scorecard supply-chain security
-
 on:
-  # Runs when branch protection rules change (default branch only)
   branch_protection_rule:
-
-  # Weekly run to keep "Maintained" and hygiene checks fresh
   schedule:
-    - cron: '37 10 * * 4' # Every Thursday at 10:37 UTC
-
-  # Run on pushes to the default branch
+    - cron: '37 10 * * 4'
   push:
-    branches: [ "master" ] # change to "main" if your default branch is main
+    branches: [ "master" ]
 
-# Default to read-only permissions
+# Global permissions set to read-all for security
 permissions: read-all
 
 jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
-
     permissions:
-      # Required to upload SARIF results to GitHub Security → Code Scanning
+      # Required to upload SARIF results to Code Scanning
       security-events: write
-
-      # Required to publish results and enable Scorecard badge (public repos)
+      # Required to publish results to OpenSSF (id-token)
       id-token: write
-
-      # Uncomment if needed for private repositories
-      # contents: read
-      # actions: read
+      # REQUIRED for actions/upload-artifact to function
+      actions: write
+      # Required for checkout
+      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4 # Updated to v4.x
         with:
           persist-credentials: false
 
       - name: Run OpenSSF Scorecard analysis
-        uses: ossf/scorecard-action@0864cf19026789058feabb7e87baa5f140aac736 # v2.3.1
+        uses: ossf/scorecard-action@v2.3.1
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
 
-          # Optional: required for private repos or branch-protection checks on public repos
-          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
-
-      # Optional: keep SARIF as a workflow artifact for debugging/download
+      # This was the step failing due to permissions
       - name: Upload SARIF artifact
-        uses: actions/upload-artifact@97a0fba1372883ab732affbe8f94b823f91727db # v3.pre.node20
+        uses: actions/upload-artifact@v4 # Updated to v4 for better reliability
         with:
-          name: SARIF_file
+          name: scorecard-results
           path: results.sarif
           retention-days: 5
 
-      # Upload results to GitHub Security → Code Scanning
       - name: Upload results to code scanning
         uses: github/codeql-action/upload-sarif@v3
         with:
