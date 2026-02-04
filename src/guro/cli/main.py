@@ -27,7 +27,7 @@ def print_banner():
     console.print(banner)
 
 @click.group()
-@click.version_option(version='1.0.0')
+@click.version_option(version='1.1.3')
 def cli():
     """🚀 Guro - A Simple System Monitoring & Benchmarking Toolkit"""
     print_banner()
@@ -87,15 +87,47 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
             border_style="red"
         ))
 
-@cli.command()  # Added the cli decorator here
+@cli.command()
+def gpu():
+    """🚀 Quickly check all available GPUs and their current status"""
+    from ..core.monitor import GPUDetector
+    from rich.table import Table
+    from rich import box
+    
+    with console.status("[bold green]Detecting GPUs..."):
+        gpu_info = GPUDetector.get_all_gpus()
+        
+    if gpu_info['available']:
+        gpu_table = Table(title="Detected GPUs", box=box.HEAVY)
+        gpu_table.add_column("GPU", style="cyan")
+        gpu_table.add_column("Metric", style="cyan")
+        gpu_table.add_column("Value", style="green")
+        
+        for i, gpu in enumerate(gpu_info['gpus']):
+            gpu_table.add_row(f"GPU {i}", "Type", gpu.get('type', 'Unknown'))
+            gpu_table.add_row("", "Name", gpu.get('name', 'Unknown'))
+            if gpu.get('memory_total'):
+                gpu_table.add_row("", "Memory Total", f"{gpu['memory_total'] / (1024**3):.2f} GB")
+            if gpu.get('utilization') is not None:
+                gpu_table.add_row("", "Utilization", f"{gpu['utilization']}%")
+            if gpu.get('temperature'):
+                gpu_table.add_row("", "Temperature", f"{gpu['temperature']}°C")
+            if i < len(gpu_info['gpus']) - 1:
+                gpu_table.add_section()
+        
+        console.print(gpu_table)
+    else:
+        console.print("[yellow]GPU not found in your device[/yellow]")
+
+@cli.command()
 @click.option('--interval', '-i', 
               type=click.FloatRange(min=0.1, min_open=False),
               default=1.0, 
-              help='Update interval in seconds (must be greater than 0.1)')
+              help='Update interval in seconds')
 @click.option('--duration', '-d', 
               type=click.IntRange(min=1, min_open=False),
               default=10, 
-              help='Duration to run in seconds (default: 10)')
+              help='Duration to run in seconds')
 def heatmap(interval: float, duration: int):
     """🌡️ Display unified system temperature heatmap"""
     try:
@@ -123,9 +155,10 @@ def list_features():
     table.add_column("Options", style="yellow")
 
     commands = {
-        "monitor": ("📊 Real-time system monitoring", "-i/--interval, -d/--duration, -e/--export"),
-        "benchmark": ("🔥 System benchmarking", "-t/--type [mini/god], --gpu-only, --cpu-only"),
-        "heatmap": ("🌡️ Hardware Heatmap Analysis", "-i/--interval, -d/--duration"),
+        "monitor": ("📊 Real-time system monitoring", "-i, -d, -e"),
+        "gpu": ("🚀 Dedicated GPU status check", "None"),
+        "benchmark": ("🔥 System benchmarking", "-t [mini/god], --gpu-only"),
+        "heatmap": ("🌡️ Hardware Heatmap Analysis", "-i, -d"),
         "about": ("ℹ️  About Guro", "None"),
         "list": ("📋 List all commands", "None")
     }
@@ -140,7 +173,7 @@ def about():
     """ℹ️  Display information about Guro"""
     about_text = """[bold cyan]Guro - A Simple System Monitoring & Benchmarking Toolkit[/bold cyan]
         
-[green]Version:[/green] 1.0.3
+[green]Version:[/green] 1.1.3
 [green]Author:[/green] Dhanush Kandhan
 [green]License:[/green] MIT
         
@@ -149,8 +182,8 @@ def about():
 [yellow]Key Features:[/yellow]
 • 📊 Real-time system monitoring
 • 💅 Catchy CL Interface
-• 🔥 Performance benchmarking
-• 🌡️ Hardware Heatmap Analysis
+• 🔥 Performance benchmarking (with Multi-GPU support)
+• 🌡️ Hardware Heatmap Analysis (Hottest component tracking)
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro
 [blue]Documentation:[/blue] https://github.com/dhanushk-offl/guro/wiki"""

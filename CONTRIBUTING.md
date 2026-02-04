@@ -1,28 +1,53 @@
-## CONTRIBUTING.md
-
 # Contributing to Guro
 
-We love open-source contributions! To contribute to **Guro**, please follow these guidelines:
+Thank you for your interest in contributing to Guro. This document outlines the technical standards and processes required for contributing to this project.
 
-### Steps to Contribute:
-1. Fork the repository.
-2. Clone your forked repository to your local machine.
-3. Create a new branch for your feature or bugfix.
-4. Make your changes, and write tests if necessary.
-5. Commit your changes with descriptive messages.
-6. Push your changes to your forked repository.
-7. Create a pull request (PR) against the `master` branch.
+## Development Environment Setup
 
-### Code Style
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/dhanushk-offl/guro.git
+   cd guro
+   ```
 
-We follow **PEP8** style for Python code. Please ensure your code adheres to this style guide.
+2. **Initialize a virtual environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Windows: venv\Scripts\activate
+   ```
 
-### Issues & Bug Reports
+3. **Install development dependencies**:
+   ```bash
+   pip install -e ".[test]"
+   ```
 
-If you encounter an issue, please open a new issue in the [issues section](https://github.com/dhanushk-offl/guro/issues). Provide detailed information, including steps to reproduce the bug.
+## Architectural Guidelines
 
-### Need Help?
+- **Statelessness**: Core logic (monitoring, benchmarking) should remain decoupled from the CLI interface where possible.
+- **Robustness**: Subprocess calls (e.g., `nvidia-smi`, `sensors`) must handle exceptions and varying output formats gracefully. Always use UTF-8 decoding and prefer regex-free parsing when feasible.
+- **UI Performance**: Updates to the TUI should be handled via `rich.live` to minimize terminal flickering. Large layouts should be split into logical components.
 
-Feel free to ask questions or suggest improvements by opening a new issue or pull request. We welcome all feedback!
+## Testing Standards
+
+All new features or bug fixes must be accompanied by relevant unit or integration tests.
+
+- **Mocking**: Use `unittest.mock` to simulate hardware environments (e.g., mocking `GPUtil` or `subprocess` outputs) to ensure tests can run on any CI/CD environment.
+- **Execution**:
+  ```bash
+  python -m pytest tests/
+  ```
+- **Coverage**: Maintain or improve the current test coverage for core modules.
+
+## Pull Request Process
+
+1. **Branching**: Create a feature branch from `main`.
+2. **Commit Messages**: Use descriptive, imperative commit messages (e.g., "Add support for integrated Intel GPUs").
+3. **Verification**: Ensure all tests pass and the code adheres to PEP 8 standards.
+4. **Documentation**: Update the `README.md` or internal docstrings if your changes modify the public API or behavior.
+
+## Code of Conduct
+
+Maintain a professional and respectful environment for all contributors.
 
 ---
+Technical questions can be directed to the repository maintainers through GitHub Issues.

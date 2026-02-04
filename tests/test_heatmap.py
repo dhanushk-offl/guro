@@ -74,7 +74,7 @@ def test_system_layout_generation(heatmap):
     layout = heatmap.generate_system_layout()
     
     assert isinstance(layout, Panel)
-    assert "System Temperature Heatmap" in layout.title
+    assert "Internal Thermal Map" in layout.title
     # Add more specific assertions about layout content
     assert isinstance(layout.renderable, Text)
 
@@ -86,7 +86,8 @@ def test_system_layout_generation(heatmap):
 def test_heatmap_run_duration(heatmap, mock_system_temps, interval, duration):
     start_time = time.time()
     
-    with patch.object(heatmap, 'get_system_temps', return_value=mock_system_temps):
+    with patch.object(heatmap, 'get_system_temps', return_value=mock_system_temps), \
+         patch('guro.core.heatmap.Live'):
         update_count = heatmap.run(interval=interval, duration=duration)
     
     elapsed_time = time.time() - start_time

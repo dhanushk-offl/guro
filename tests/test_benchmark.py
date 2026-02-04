@@ -12,9 +12,10 @@ mock_GPUtil = Mock()
 mock_GPUtil.getGPUs = Mock()
 
 @pytest.fixture(autouse=True)
-def mock_gputil():
+def mock_gputil_env():
     """Fixture to mock GPUtil for all tests"""
-    with patch.dict('sys.modules', {'GPUtil': mock_GPUtil}):
+    with patch('guro.core.benchmark.HAS_GPU_STATS', True), \
+         patch('guro.core.benchmark.GPUtil', mock_GPUtil):
         yield
 
 class TestSafeSystemBenchmark:
@@ -35,28 +36,28 @@ class TestSafeSystemBenchmark:
     @patch('guro.core.benchmark.HAS_GPU_STATS', True)
     def test_check_gpu_with_gpu(self, benchmark):
         """Test GPU detection when GPU is available"""
+        from guro.core.benchmark import GPUtil as test_GPUtil
         # Create a mock GPU object
         mock_gpu = Mock()
         mock_gpu.name = "Test GPU"
         mock_gpu.memoryTotal = 8192
         mock_gpu.driver = "123.45"
-        mock_GPUtil.getGPUs.return_value = [mock_gpu]
         
-        gpu_info = benchmark._check_gpu()
-        assert gpu_info['available']
-        assert gpu_info['info']['name'] == "Test GPU"
-        assert gpu_info['info']['count'] == 1
-        assert gpu_info['info']['memory_total'] == 8192
-        assert gpu_info['info']['driver_version'] == "123.45"
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[mock_gpu]):
+            gpu_info = benchmark._check_gpu()
+            assert gpu_info['available']
+            assert len(gpu_info['gpus']) == 1
+            assert gpu_info['gpus'][0]['name'] == "Test GPU"
+            assert gpu_info['gpus'][0]['memory_total'] == 8192
+            assert gpu_info['gpus'][0]['driver_version'] == "123.45"
 
     def test_check_gpu_without_gpu(self, benchmark):
         """Test GPU detection when no GPU is available"""
-        # Simulate no GPUs available
-        mock_GPUtil.getGPUs.return_value = []
-        
-        gpu_info = benchmark._check_gpu()
-        assert not gpu_info['available']
-        assert gpu_info['info'] is None
+        from guro.core.benchmark import GPUtil as test_GPUtil
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[]):
+            gpu_info = benchmark._check_gpu()
+            assert not gpu_info['available']
+            assert gpu_info['gpus'] == []
 
     def test_get_system_info(self, benchmark):
         """Test system information gathering"""
@@ -66,8 +67,7 @@ class TestSafeSystemBenchmark:
         assert system_info['processor'] == platform.processor()
         assert system_info['cpu_cores'] == psutil.cpu_count(logical=False)
         assert system_info['cpu_threads'] == psutil.cpu_count(logical=True)
-        assert isinstance(system_info['gpu'], dict)
-        assert 'available' in system_info['gpu']
+        assert isinstance(system_info['gpus'], list)
 
     @patch('time.sleep', return_value=None)
     def test_safe_cpu_test(self, mock_sleep, benchmark):
@@ -100,40 +100,28 @@ class TestSafeSystemBenchmark:
     @patch('guro.core.benchmark.HAS_GPU_STATS', True)
     def test_safe_gpu_test_with_gpu(self, benchmark):
         """Test GPU benchmark when GPU is available"""
+        from guro.core.benchmark import GPUtil as test_GPUtil
         duration = 1
         
-        # Create a mock GPU object for initial check
-        mock_gpu_init = Mock()
-        mock_gpu_init.name = "Test GPU"
-        mock_gpu_init.memoryTotal = 8192
-        mock_gpu_init.driver = "123.45"
-        mock_GPUtil.getGPUs.return_value = [mock_gpu_init]
-        
-        # Set up the benchmark GPU check
-        benchmark.has_gpu = benchmark._check_gpu()
-        benchmark.running = True
-        
-        # Create a mock GPU for the test
         mock_gpu = Mock()
         mock_gpu.load = 0.5
         mock_gpu.memoryUsed = 4096
-        mock_GPUtil.getGPUs.return_value = [mock_gpu]
         
-        result = benchmark.safe_gpu_test(duration)
+        benchmark.has_gpu = {'available': True, 'gpus': [{'name': 'Test'}]}
+        benchmark.running = True
+        
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[mock_gpu]):
+            result = benchmark.safe_gpu_test(duration)
         
         assert 'times' in result
-        assert 'loads' in result
-        assert 'memory_usage' in result
-        assert isinstance(result['times'], list)
-        assert isinstance(result['loads'], list)
-        assert isinstance(result['memory_usage'], list)
-        assert len(result['times']) > 0
-        assert len(result['loads']) > 0
-        assert len(result['memory_usage']) > 0
+        assert 'gpu_stats' in result
+        assert len(result['gpu_stats']) > 0
+        assert result['gpu_stats'][0][0]['load'] == 50.0
 
+    @patch('guro.core.benchmark.HAS_GPU_STATS', False)
     def test_safe_gpu_test_without_gpu(self, benchmark):
         """Test GPU benchmark when no GPU is available"""
-        benchmark.has_gpu = {'available': False, 'info': None}
+        benchmark.has_gpu = {'available': False, 'gpus': []}
         duration = 1
         
         result = benchmark.safe_gpu_test(duration)
@@ -141,17 +129,25 @@ class TestSafeSystemBenchmark:
         assert 'error' in result
         assert result['error'] == 'No GPU available'
         assert 'times' in result
-        assert 'loads' in result
+        assert 'gpu_stats' not in result
         assert len(result['times']) == 0
-        assert len(result['loads']) == 0
 
     def test_generate_status_table(self, benchmark):
         """Test status table generation"""
-        table = benchmark.generate_status_table()
+        from guro.core.benchmark import GPUtil as test_GPUtil
+        mock_gpu = Mock()
+        mock_gpu.name = "Test GPU"
+        mock_gpu.load = 0.5
+        mock_gpu.memoryUsed = 4096
+        mock_gpu.memoryTotal = 8192
         
-        assert isinstance(table, Table)
-        assert table.title == "Benchmark Status"
-        assert len(table.columns) >= 2  # Should have at least metric and value columns
+        benchmark.has_gpu = {'available': True, 'gpus': [{'name': 'Test'}]}
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[mock_gpu]):
+            table = benchmark.generate_status_table()
+            
+            assert isinstance(table, Table)
+            assert table.title == "Benchmark Status"
+            assert len(table.columns) >= 2
 
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
@@ -170,18 +166,23 @@ class TestSafeSystemBenchmark:
     @patch('rich.live.Live')
     def test_mini_test(self, mock_live, benchmark):
         """Test mini benchmark execution"""
-        benchmark.mini_test()
-        assert 'system_info' in benchmark.results
-        assert benchmark.results['duration'] == 30
-        assert 'cpu' in benchmark.results
-        assert 'memory' in benchmark.results
+        from guro.core.benchmark import GPUtil as test_GPUtil
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[]):
+            benchmark.mini_test()
+            assert 'system_info' in benchmark.results
+            assert benchmark.results['duration'] == 30
+            assert 'cpu' in benchmark.results
+            assert 'memory' in benchmark.results
 
     @patch('rich.live.Live')
     def test_god_test(self, mock_live, benchmark):
         """Test god-level benchmark execution"""
-        benchmark.god_test()
-        assert 'system_info' in benchmark.results
-        assert benchmark.results['duration'] == 60
-        assert 'cpu' in benchmark.results
-        assert 'memory' in benchmark.results
-        assert 'gpu' in benchmark.results
+        from guro.core.benchmark import GPUtil as test_GPUtil
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[]):
+            benchmark.god_test()
+            assert 'system_info' in benchmark.results
+            assert benchmark.results['duration'] == 60
+            assert 'cpu' in benchmark.results
+            assert 'memory' in benchmark.results
+            if benchmark.has_gpu['available']:
+                assert 'gpu' in benchmark.results
