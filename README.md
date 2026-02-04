@@ -25,11 +25,11 @@ Guro is a sophisticated terminal-based diagnostic toolkit designed for granular 
 ## Visual Presentation
 
 ### 1. Performance Telemetry View
-![Performance Dashboard](assets/monitor_dashboard.png)
+![Performance Dashboard](https://res.cloudinary.com/dwir71gi2/image/upload/v1770200721/monitor_dashboard_odhdgo.png)
 *High-concurrency monitoring of CPU cores, memory allocation, and active process telemetry*
 
 ### 2. Hardware Thermal Schematic
-![Thermal Heatmap](assets/thermal_heatmap.png)
+![Thermal Heatmap](https://res.cloudinary.com/dwir71gi2/image/upload/v1770200720/thermal_heatmap_x4mcib.png)
 *Spatial temperature mapping across integrated hardware components with synchronized trend analysis.*
 
 ---
