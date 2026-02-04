@@ -12,3 +12,5 @@ venv/
 # IDE-specific files
 .vscode/
 .idea/
+
+pypi-api.txt

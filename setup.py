@@ -3,27 +3,16 @@ import sys
 
 common_packages = [
     'click>=8.0.0',
-    'rich>=10.0.0',
+    'rich>=12.0.0',
     'psutil>=5.8.0',
     'gputil>=1.4.0',
-    'matplotlib>=3.5.0',
-    'nvidia-ml-py>=11.515.0',
-    'pandas>=1.3.0',
-    'plotly>=5.5.0',
-    'termcolor>=2.0.0',
-    'tabulate>=0.8.9',
+    'numpy>=1.20.0',
     'py-cpuinfo>=8.0.0',
-    'setproctitle>=1.2.2',
-    'keyboard>=0.13.5',
-    'pytest>=7.0.0',
-    'pytest-mock>=3.10.0',
-    'pytest-cov>=4.0.0',
-    'pytest-timeout>=2.1.0',
+    'nvidia-ml-py>=11.515.0',
 ]
 
-if sys.platform.startswith('linux'):
-    common_packages.append('pyamdgpuinfo>=2.1.6')
-    common_packages.append('distro>=1.7.0')
+if sys.platform.startswith('win32'):
+    common_packages.append('wmi>=1.5.0')
 
 # Test requirements
 test_requires = [
@@ -35,7 +24,7 @@ test_requires = [
 
 setup(
     name="guro",
-    version="1.0.3",
+    version="1.1.2",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=common_packages,

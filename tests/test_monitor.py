@@ -10,7 +10,8 @@ import sys
 from typing import Dict, List
 
 # Import your classes
-from guro.core.monitor import SystemMonitor, GPUDetector, ASCIIGraph
+from guro.core.monitor import SystemMonitor, GPUDetector
+from guro.core.utils import ASCIIGraph
 
 @pytest.fixture
 def monitor():
@@ -48,7 +49,7 @@ def test_get_system_info(mock_cpu_count, mock_cpu_freq, monitor):
 def test_nvidia_gpu_detection(mock_check_output):
     """Test NVIDIA GPU detection"""
     mock_output = "GeForce RTX 3080,10240,5120,5120,65,50,75,200"
-    mock_check_output.return_value = mock_output
+    mock_check_output.return_value = mock_output.encode()
     
     gpu_info = GPUDetector.get_nvidia_info()
     
@@ -68,7 +69,7 @@ def test_amd_gpu_detection(mock_check_output):
     Total GPU Memory: 8192 MB
     Temperature: 70 C
     """
-    mock_check_output.return_value = mock_output
+    mock_check_output.return_value = mock_output.encode()
     
     gpu_info = GPUDetector.get_amd_info()
     
@@ -102,7 +103,8 @@ def test_performance_monitoring(mock_virtual_memory, monitor):
 
     # Test monitoring data collection
     monitor.monitoring_data = []
-    monitor.run_performance_test(interval=0.1, duration=1, export_data=True)
+    with patch('guro.core.monitor.Live'):
+        monitor.run_performance_test(interval=0.1, duration=1, export_data=True)
     
     assert os.path.exists('monitoring_data.csv')
     assert len(monitor.monitoring_data) > 0
