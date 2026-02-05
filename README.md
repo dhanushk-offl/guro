@@ -6,7 +6,7 @@
 [![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dhanushk-offl/guro/badge)](https://scorecard.dev/viewer/?uri=github.com/dhanushk-offl/guro)
 [![CodeQL Advanced](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml)
-[![PyPI version](https://badge.fury.io/py/guro.svg)](https://badge.fury.io/py/guro)
+[![PyPI version](https://img.shields.io/pypi/v/guro.svg)](https://pypi.org/project/guro/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/guro.svg?label=PyPI%20downloads)](https://pypi.org/project/guro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-gray.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Stars](https://img.shields.io/github/stars/dhanushk-offl/guro.svg?style=social&label=Star&maxAge=2592000)](https://github.com/dhanushk-offl/guro)
