@@ -19,3 +19,7 @@ py3nvml>=0.2.7
 # Linux-specific packages
 pyamdgpuinfo>=2.1.6; platform_system == "Linux"
 distro>=1.7.0; platform_system == "Linux"
+pillow>=10.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
+fonttools>=4.43.0 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
+numpy>=1.22.0 # not directly required, pinned by Snyk to avoid a vulnerability
