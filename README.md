@@ -5,6 +5,8 @@
 
 [![Python package](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/python-package.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dhanushk-offl/guro/badge)](https://scorecard.dev/viewer/?uri=github.com/dhanushk-offl/guro)
+
+[![Known Vulnerabilities](https://snyk.io/test/github/dhanushk-offl/guro/badge.svg)](https://snyk.io/test/github/dhanushk-offl/guro)
 [![CodeQL Advanced](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml)
 [![PyPI version](https://img.shields.io/pypi/v/guro.svg)](https://pypi.org/project/guro/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/guro.svg?label=PyPI%20downloads)](https://pypi.org/project/guro/)
