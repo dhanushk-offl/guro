@@ -1,3 +1,4 @@
-# guro/core/__init__.py
 from .monitor import SystemMonitor
-__all__ = ['SystemMonitor']
+from .._version import __version__
+
+__all__ = ['SystemMonitor', '__version__']
