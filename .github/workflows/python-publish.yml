@@ -100,7 +100,7 @@ jobs:
       - name: Get version from _version.py
         id: version
         run: |
-          VERSION=$(python -c "import re; f=open('src/guro/_version.py'); print(re.search(r'__version__\s*=\s*[\"']([^\"']+)', f.read()).group(1))")
+          VERSION=$(python -c "exec(open('src/guro/_version.py').read()); print(__version__)")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes
