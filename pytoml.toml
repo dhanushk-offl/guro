@@ -79,7 +79,8 @@ all = [
 [project.urls]
 "Bug Reports" = "https://github.com/dhanushk-offl/guro/issues"
 "Source" = "https://github.com/dhanushk-offl/guro"
-"Documentation" = "https://github.com/dhanushk-offl/guro/wiki"
+"Documentation" = "https://guro.pages.dev/"
+"Homepage" = "https://guro.pages.dev/"
 
 [tool.setuptools.packages.find]
 where = ["src"]

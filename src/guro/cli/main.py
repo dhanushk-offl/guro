@@ -195,7 +195,8 @@ def about():
 • 🌡️ Hardware Heatmap Analysis (Hottest component tracking)
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro
-[blue]Documentation:[/blue] https://github.com/dhanushk-offl/guro/wiki"""
+[blue]Website:[/blue] https://guro.pages.dev/
+[blue]Documentation:[/blue] https://guro.pages.dev/"""
 
     console.print(Panel(about_text, title="About Guro", border_style="blue"))
 

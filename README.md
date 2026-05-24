@@ -22,6 +22,8 @@
 
 Guro is a sophisticated terminal-based diagnostic toolkit designed for granular system resource monitoring and hardware analysis. Built for engineers and enthusiasts, it provides a desktop-class dashboard experience within the command-line environment, delivering precise telemetry across Linux, macOS, and Windows.
 
+🌐 **Website**: [guro.pages.dev](https://guro.pages.dev/)
+
 ---
 
 ## Visual Presentation
@@ -80,6 +82,7 @@ Access Guro via its unified command-line interface.
 
 Guro is an open-source project that adheres to professional development standards.
 
+- **Website**: [guro.pages.dev](https://guro.pages.dev/)
 - **Developer Guide**: Comprehensive guidelines can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Architecture**: In-depth module analysis is available in the project documentation.
 - **License**: Released under the MIT License.
