@@ -11,6 +11,12 @@ Welcome to the technical documentation for Guro. This wiki provides in-depth ana
 - [Platform Implementation Details](Platform-Support.md)
 - [Troubleshooting and Diagnostics](Troubleshooting.md)
 
+## Project Links
+
+- **Website**: [guro.pages.dev](https://guro.pages.dev/)
+- **Source Code**: [github.com/dhanushk-offl/guro](https://github.com/dhanushk-offl/guro)
+- **Issue Tracker**: [github.com/dhanushk-offl/guro/issues](https://github.com/dhanushk-offl/guro/issues)
+
 ## Project Vision
 
 Guro is designed to provide high-fidelity system telemetry in a lightweight, terminal-based format. By prioritizing robust data acquisition and structured visualization, Guro serves as a reliable diagnostic bridge between low-level system sensors and the end-user.

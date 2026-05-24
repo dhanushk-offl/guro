@@ -47,7 +47,7 @@ setup(
     description="A System Tool-kit for Real-time Monitoring and Analysis",
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/dhanushk-offl/guro",
+    url="https://guro.pages.dev/",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -82,7 +82,8 @@ setup(
     project_urls={
         "Bug Reports": "https://github.com/dhanushk-offl/guro/issues",
         "Source": "https://github.com/dhanushk-offl/guro",
-        "Documentation": "https://github.com/dhanushk-offl/guro/wiki"
+        "Documentation": "https://guro.pages.dev/",
+        "Homepage": "https://guro.pages.dev/"
     },
     extras_require={
         'nvidia': ['py3nvml>=0.2.7', 'nvidia-ml-py>=11.515.0'],
