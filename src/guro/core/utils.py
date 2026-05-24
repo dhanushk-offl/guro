@@ -1,5 +1,6 @@
 from collections import deque
 
+
 class ASCIIGraph:
     def __init__(self, width=70, height=10):
         self.width = width
@@ -25,12 +26,12 @@ class ASCIIGraph:
         lines = []
         lines.append("╔" + "═" * (self.width + 2) + "╗")
         lines.append("║ " + title.center(self.width) + " ║")
-        lines.append("║ " + "─" * self.width + " ║")
+        lines.append("\u2502 " + "\u2500" * self.width + " \u2502")
 
         graph_str = ""
         for val in normalized:
             graph_str += self.chars[val]
         lines.append("║ " + graph_str.ljust(self.width) + " ║")
-        
+
         lines.append("╚" + "═" * (self.width + 2) + "╝")
         return "\n".join(lines)

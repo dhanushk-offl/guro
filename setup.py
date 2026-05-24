@@ -1,5 +1,15 @@
+import re
 from setuptools import setup, find_packages
 import sys
+
+# Read version from the single source of truth
+def get_version():
+    with open("src/guro/_version.py") as f:
+        match = re.search(r'__version__\s*=\s*["\']([^"\']+)', f.read())
+        if match:
+            return match.group(1)
+        raise RuntimeError("Unable to find version string.")
+
 
 common_packages = [
     'click>=8.0.0',
@@ -8,7 +18,6 @@ common_packages = [
     'gputil>=1.4.0',
     'numpy>=1.20.0',
     'py-cpuinfo>=8.0.0',
-    'nvidia-ml-py>=11.515.0',
 ]
 
 if sys.platform.startswith('win32'):
@@ -24,7 +33,7 @@ test_requires = [
 
 setup(
     name="guro",
-    version="1.1.3",
+    version=get_version(),
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=common_packages,
@@ -57,7 +66,7 @@ setup(
         "Environment :: Console",
         "Natural Language :: English"
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     keywords=[
         "system-monitoring",
         "gpu-optimization",

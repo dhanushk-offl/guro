@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "guro"
-version = "1.1.3"
+dynamic = ["version"]
 description = "A System Tool-kit for Real-time Monitoring and Analysis"
 readme = "README.md"
 long-description-content-type = "text/markdown"
@@ -12,7 +12,7 @@ authors = [
     {name = "Dhanush Kandhan", email = "dhanushkandhan75@gmail.com"}
 ]
 license = {text = "MIT"}
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 keywords = [
     "system-monitoring",
     "gpu-optimization",
@@ -51,7 +51,6 @@ dependencies = [
     "gputil>=1.4.0",
     "numpy>=1.20.0",
     "py-cpuinfo>=8.0.0",
-    "nvidia-ml-py>=11.515.0",
     "wmi>=1.5.0; sys_platform == 'win32'"
 ]
 
@@ -85,7 +84,8 @@ all = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.entry-points]
-console_scripts = [
-    "guro=guro.cli.main:cli"
-]
+[tool.setuptools.dynamic]
+version = {attr = "guro._version.__version__"}
+
+[project.scripts]
+guro = "guro.cli.main:cli"
