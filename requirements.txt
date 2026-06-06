@@ -4,3 +4,4 @@ psutil>=5.8.0
 gputil>=1.4.0
 numpy>=1.22.2
 py-cpuinfo>=8.0.0
+pygments>=2.20.0 # not directly required, pinned by Snyk to avoid a vulnerability
