@@ -1,5 +1,35 @@
 # Guro Release Notes 🚀
 
+## v1.2.0 — Network Intelligence
+*June 15, 2026*
+
+**New** — Real-time network monitoring with bandwidth sparklines, TCP state analysis, process-level connection tracking, and protocol statistics. Zero additional dependencies.
+
+### 🌐 What's New?
+
+#### 📡 Network Dashboard
+- Multi-pane live TUI with per-interface bandwidth history, adapter specs, and protocol stats.
+- Dedicated Bandwidth History panel with 30-sample upload/download sparklines and current speed values.
+- `guro network --speed` — single-shot speed snapshot across all active interfaces.
+- `guro network --interfaces` — full adapter listing with IP, MAC, speed, duplex.
+- `guro network --connections` — active TCP connections with PID, process, and remote address.
+
+#### 🖧 TCP & Protocol Analysis
+- Real-time TCP state distribution (ESTABLISHED, LISTEN, TIME_WAIT, etc.).
+- Retransmission ratio from `/proc/net/snmp` on Linux.
+- Per-connection process resolution with graceful permission fallback.
+
+#### 📦 Export & CSV Logging
+- `guro network --export` / `-e` flag to log bandwidth data to timestamped CSV files.
+
+#### 🛠️ Removed
+- `guro network --test` (speed test) has been removed to keep the module focused on real-time monitoring.
+
+### 👩‍💻 Installation
+```bash
+pip install guro --upgrade
+```
+
 ## v1.1.3 - Release Updates
 *February 04, 2026*
 

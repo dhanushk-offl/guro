@@ -159,14 +159,12 @@ def heatmap(interval: float, duration: int):
 @click.option('--interfaces', is_flag=True, help='List all network interfaces')
 @click.option('--speed', is_flag=True, help='Show current network speed')
 @click.option('--connections', 'show_connections', is_flag=True, help='Show active TCP connections')
-@click.option('--test', 'speed_test', is_flag=True, help='Run internet speed test')
 @click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
 @click.option('--duration', '-d', default=None, type=int, help='Monitoring duration in seconds')
 @click.option('--export', '-e', is_flag=True, help='Export monitoring data to CSV')
 def network(interfaces: bool, speed: bool, show_connections: bool,
-            speed_test: bool,
             interval: float, duration: Optional[int], export: bool):
-    """🖧 Monitor network interfaces, bandwidth, and connections"""
+    """[NET] Monitor network interfaces, bandwidth, and connections"""
     try:
         net = NetworkMonitor()
 
@@ -176,8 +174,6 @@ def network(interfaces: bool, speed: bool, show_connections: bool,
             net.show_speed()
         elif show_connections:
             net.show_connections()
-        elif speed_test:
-            net.run_speed_test()
         else:
             net.run_dashboard(
                 interval=interval,
@@ -203,7 +199,7 @@ def list_features():
         "gpu": ("🚀 Dedicated GPU status check", "None"),
         "benchmark": ("🔥 System benchmarking", "-t [mini/god], --gpu-only"),
         "heatmap": ("🌡️ Hardware Heatmap Analysis", "-i, -d"),
-        "network": ("🖧 Network monitoring dashboard", "--interfaces, --speed, --connections, --test"),
+        "network": ("[NET] Network monitoring dashboard", "--interfaces, --speed, --connections"),
         "about": ("ℹ️  About Guro", "None"),
         "list": ("📋 List all commands", "None")
     }
@@ -230,7 +226,7 @@ def about():
 • 💅 Catchy CL Interface
 • 🔥 Performance benchmarking (with Multi-GPU support)
 • 🌡️ Hardware Heatmap Analysis (Hottest component tracking)
-• 🖧 Real-time network monitoring (bandwidth, connections, protocols)
+• [NET] Real-time network monitoring (bandwidth, connections, protocols)
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro
 [blue]Website:[/blue] https://guro.pages.dev/

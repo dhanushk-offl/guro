@@ -1,16 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 import time
-import platform
-import os
-import socket
-import urllib.error
 
 import psutil
 
 from guro.core.network import (
     NetworkMonitor, _format_bytes, _format_speed, _sparkline, _get_proc_net_snmp,
-    SPEED_TEST_DL_SIZE, SPEED_TEST_UL_SIZE,
 )
 
 
@@ -408,125 +403,4 @@ class TestNetworkMonitor:
             mock_print.assert_called_once()
 
 
-class TestSpeedTest:
-    @patch('urllib.request.urlopen')
-    def test_download_test_success(self, mock_urlopen):
-        mock_resp = MagicMock()
-        chunk = b'x' * 262144
-        mock_resp.read.side_effect = [chunk, chunk, b'']
-        mock_resp.__enter__.return_value = mock_resp
-        mock_urlopen.return_value = mock_resp
 
-        m = NetworkMonitor()
-        result = m._download_test()
-        assert result['speed_bps'] > 0
-        assert result['speed_mbps'] > 0
-        assert result['error'] is None
-
-    @patch('urllib.request.urlopen')
-    def test_download_test_failure(self, mock_urlopen):
-        mock_urlopen.side_effect = urllib.error.URLError('no internet')
-
-        m = NetworkMonitor()
-        result = m._download_test()
-        assert result['error'] is not None
-        assert result['speed_bps'] == 0
-
-    @patch('urllib.request.urlopen')
-    def test_upload_test_success(self, mock_urlopen):
-        mock_resp = MagicMock()
-        chunk = b'x' * 262144
-        mock_resp.read.side_effect = [chunk, chunk, b'']
-        mock_resp.__enter__.return_value = mock_resp
-        mock_urlopen.return_value = mock_resp
-
-        m = NetworkMonitor()
-        with patch.object(os, 'urandom', return_value=b'x' * SPEED_TEST_UL_SIZE):
-            result = m._upload_test()
-        assert result['speed_bps'] > 0
-        assert result['speed_mbps'] > 0
-        assert result['error'] is None
-
-    @patch('urllib.request.urlopen')
-    def test_upload_test_failure(self, mock_urlopen):
-        mock_urlopen.side_effect = urllib.error.URLError('no internet')
-
-        m = NetworkMonitor()
-        with patch.object(os, 'urandom', return_value=b'x' * SPEED_TEST_UL_SIZE):
-            result = m._upload_test()
-        assert result['error'] is not None
-        assert result['speed_bps'] == 0
-
-    def test_measure_latency_success(self):
-        m = NetworkMonitor()
-        mock_sock = MagicMock()
-        with patch('socket.socket', return_value=mock_sock):
-            with patch('time.time') as mock_time:
-                mock_time.side_effect = [100.0, 100.012, 101.0, 101.015, 102.0, 102.035]
-                result = m._measure_latency()
-        assert result['reachable'] is True
-        assert result['latency_ms'] == pytest.approx(12.0, rel=0.01)
-
-    def test_measure_latency_failure(self):
-        m = NetworkMonitor()
-        mock_sock = MagicMock()
-        mock_sock.connect.side_effect = socket.timeout()
-        with patch('socket.socket', return_value=mock_sock):
-            result = m._measure_latency()
-        assert result['reachable'] is False
-        assert result['latency_ms'] is None
-
-    def test_format_time(self):
-        m = NetworkMonitor()
-        assert '0s' in m._format_time(0)
-        assert '5s' in m._format_time(5)
-        assert '1m' in m._format_time(60)
-        assert '2m 30s' in m._format_time(150)
-        assert '1h' in m._format_time(3600)
-
-    @patch('psutil.net_if_stats')
-    @patch('psutil.net_if_addrs')
-    def test_run_speed_test_no_active_iface(self, mock_addrs, mock_stats):
-        mock_stats.return_value = {}
-        mock_addrs.return_value = {}
-        m = NetworkMonitor()
-        with patch.object(m._console, 'print') as mock_print:
-            m.run_speed_test()
-            mock_print.assert_called_once()
-
-    @patch('psutil.net_if_stats')
-    @patch('psutil.net_if_addrs')
-    def test_run_speed_test_no_internet(self, mock_addrs, mock_stats):
-        mock_stats.return_value = {'eth0': FakeStat(isup=True, speed=1000)}
-        mock_addrs.return_value = {
-            'eth0': [FakeAddr(family=2, address='10.0.0.1')],
-        }
-        m = NetworkMonitor()
-        with patch.object(m, '_measure_latency',
-                          return_value={'reachable': False,
-                                        'latency_ms': None, 'jitter_ms': None}):
-            with patch.object(m._console, 'print') as mock_print:
-                m.run_speed_test()
-                mock_print.assert_called_once()
-
-    @patch('psutil.net_if_stats')
-    @patch('psutil.net_if_addrs')
-    def test_run_speed_test_full(self, mock_addrs, mock_stats):
-        mock_stats.return_value = {'eth0': FakeStat(isup=True, speed=1000)}
-        mock_addrs.return_value = {
-            'eth0': [FakeAddr(family=2, address='10.0.0.1')],
-        }
-        m = NetworkMonitor()
-        latency_mock = {'reachable': True, 'latency_ms': 12.0, 'jitter_ms': 3.0}
-        dl_mock = {'speed_bps': 50_000_000, 'speed_mbps': 50.0,
-                   'samples': [40_000_000, 50_000_000, 60_000_000], 'error': None}
-        ul_mock = {'speed_bps': 10_000_000, 'speed_mbps': 10.0,
-                   'samples': [8_000_000, 10_000_000], 'error': None}
-        with patch.object(m, '_measure_latency', return_value=latency_mock):
-            with patch.object(m, '_download_test', return_value=dl_mock):
-                with patch.object(m, '_upload_test', return_value=ul_mock):
-                    with patch.object(m, '_print_speed_report') as mock_report:
-                        m.run_speed_test()
-                        mock_report.assert_called_once_with(
-                            m.get_interfaces()[0], dl_mock, ul_mock, latency_mock
-                        )

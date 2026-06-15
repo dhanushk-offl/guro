@@ -51,7 +51,7 @@ Guro implements a robust, regex-free data acquisition layer for hardware sensors
 The benchmarking suite is designed with hardware safety as a priority. It ensures system stability by monitoring thermal thresholds during heavy load tests. It features full awareness for NVIDIA, AMD, and Integrated graphics solutions.
 
 ### Network Intelligence
-The network module provides real-time bandwidth monitoring across all interfaces with per-protocol TCP state analysis, active connection tracking, and full adapter specification reporting — all with zero additional dependencies.
+Real-time bandwidth monitoring with per-interface upload/download sparklines, TCP state distribution (ESTABLISHED, LISTEN, TIME_WAIT, etc.), process-level connection tracking, and `/proc/net/snmp` protocol statistics — all with zero additional dependencies beyond psutil.
 
 ---
 
@@ -79,7 +79,10 @@ Access Guro via its unified command-line interface.
 | **Thermal** | `guro heatmap` | Initiates spatial hardware heatmapping and trend analysis. |
 | **Graphics** | `guro gpu` | Executes a diagnostic status report for all detected GPUs. |
 | **Bench** | `guro benchmark` | Performs high-load system stability and speed testing. |
-| **Network** | `guro network` | Real-time network dashboard: bandwidth, adapters, connections, protocols. |
+| **Network** | `guro network` | Real-time dashboard: bandwidth, adapters, TCP states, connections. |
+| | `guro network --speed` | Snapshot of current upload/download speeds on all interfaces. |
+| | `guro network --interfaces` | List all network adapters with IP, MAC, speed, and duplex. |
+| | `guro network --connections` | Show active TCP connections with process names and states. |
 
 ---
 
@@ -89,9 +92,9 @@ Access Guro via its unified command-line interface.
 
 | Area | Description |
 | :--- | :--- |
-| **GPU Benchmarking** 🎮 | Native CUDA benchmarks for NVIDIA GPUs — compute performance, memory bandwidth, and thermal profiling under sustained load. |
-| **Network Diagnostics** 🌐 | ✅ **Done** — Live network monitoring with bandwidth, adapter specs, TCP states, and connection tracking. |
-| **Storage & Network I/O** 💾 | Real-time disk throughput, IOPS, and network interface monitoring tailored for server environments. |
+| **GPU Benchmarking** 🎮 | **⚠️ NEEDS CONTRIBUTORS!** — Native CUDA benchmarks for NVIDIA GPUs: compute performance, memory bandwidth, and thermal profiling. [Want to help?](https://github.com/dhanushk-offl/guro/issues) |
+| **Network Diagnostics** 🌐 | ✅ **Done** — Live dashboard with bandwidth sparklines, adapter specs, TCP state analysis, and active connection tracking. |
+| **Storage I/O** 💾 | Real-time disk throughput, IOPS, and queue-depth monitoring for server environments. |
 
 Have a feature in mind? [Open an issue](https://github.com/dhanushk-offl/guro/issues) or start a discussion — every idea counts.
 
