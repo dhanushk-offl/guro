@@ -10,6 +10,7 @@
 [![CodeQL Advanced](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhanushk-offl/guro/actions/workflows/codeql.yml)
 [![PyPI version](https://img.shields.io/pypi/v/guro.svg)](https://pypi.org/project/guro/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/guro.svg?label=PyPI%20downloads)](https://pypi.org/project/guro/)
+[![Total Downloads](https://pepy.tech/badge/guro)](https://clickpy.clickhouse.com/dashboard/guro)
 [![License: MIT](https://img.shields.io/badge/License-MIT-gray.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Stars](https://img.shields.io/github/stars/dhanushk-offl/guro.svg?style=social&label=Star&maxAge=2592000)](https://github.com/dhanushk-offl/guro)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-orange.svg)](https://buymeacoffee.com/itzmedhanu)
