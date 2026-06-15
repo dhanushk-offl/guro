@@ -7,7 +7,6 @@ name = "guro"
 dynamic = ["version"]
 description = "A System Tool-kit for Real-time Monitoring and Analysis"
 readme = "README.md"
-long-description-content-type = "text/markdown"
 authors = [
     {name = "Dhanush Kandhan", email = "dhanushkandhan75@gmail.com"}
 ]
