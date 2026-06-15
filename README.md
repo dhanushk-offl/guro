@@ -81,17 +81,19 @@ Access Guro via its unified command-line interface.
 
 ## Roadmap
 
-🚀 **Coming soon — PRs and ideas are welcome!**
+> 🚀 **Coming soon — PRs, ideas, and discussions are warmly welcomed!**
 
-1. **CUDA-based GPU Benchmarks** — Implement native CUDA benchmarks for NVIDIA GPU systems to measure compute performance, memory bandwidth, and thermal characteristics under load.
-2. **Network Monitoring & Benchmarking** — Build a network diagnostics tool similar to Apache Bench (ab) for measuring throughput, latency, and connection performance.
-3. **Network/Storage I/O Monitoring** — Add storage and network I/O monitoring tailored for server environments, including disk throughput, IOPS, and interface-level metrics.
+| Area | Description |
+| :--- | :--- |
+| **GPU Benchmarking** 🎮 | Native CUDA benchmarks for NVIDIA GPUs — compute performance, memory bandwidth, and thermal profiling under sustained load. |
+| **Network Diagnostics** 🌐 | CLI network benchmarking tool (similar to Apache Bench `ab`) for measuring throughput, latency, and connection quality. |
+| **Storage & Network I/O** 💾 | Real-time disk throughput, IOPS, and network interface monitoring tailored for server environments. |
 
-Have an idea or want to contribute? [Open an issue](https://github.com/dhanushk-offl/guro/issues) or start a discussion — all feedback is appreciated.
+Have a feature in mind? [Open an issue](https://github.com/dhanushk-offl/guro/issues) or start a discussion — every idea counts.
 
-### Why Funding Matters
+### 💖 Why Funding Matters
 
-Developing and testing system-level tooling requires access to diverse hardware environments — high-end GPU systems, multi-CPU servers, and cloud VMs for cross-platform validation. Funding helps cover the cost of renting these environments to ensure Guro works reliably across Linux, macOS, and Windows.
+Testing system-level tooling demands real hardware — high-end GPUs, multi-CPU servers, and diverse cloud VMs for cross-platform validation. Your support helps rent these environments so Guro can be tested thoroughly across Linux, macOS, and Windows.
 
 ---
 
