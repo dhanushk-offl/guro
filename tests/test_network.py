@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 import time
+import socket
 
 import psutil
 
@@ -145,12 +146,12 @@ class TestNetworkMonitor:
         mock_addrs.return_value = {
             'eth0': [
                 FakeAddr(family=psutil.AF_LINK, address='aa:bb:cc:dd:ee:ff'),
-                FakeAddr(family=2, address='192.168.1.5',
+                FakeAddr(family=socket.AF_INET, address='192.168.1.5',
                          netmask='255.255.255.0'),
-                FakeAddr(family=23, address='fe80::1'),
+                FakeAddr(family=socket.AF_INET6, address='fe80::1'),
             ],
             'lo': [
-                FakeAddr(family=2, address='127.0.0.1'),
+                FakeAddr(family=socket.AF_INET, address='127.0.0.1'),
             ],
         }
         m = NetworkMonitor()

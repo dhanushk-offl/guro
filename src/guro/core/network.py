@@ -3,6 +3,7 @@ import threading
 import platform
 import csv
 import datetime
+import socket
 from collections import deque
 from typing import Dict, List, Optional, Tuple
 
@@ -51,6 +52,10 @@ def _get_proc_net_snmp() -> Dict:
             lines = f.readlines()
         for i, line in enumerate(lines):
             parts = line.strip().split()
+            if len(parts) < 2:
+                continue
+            if parts[1].isdigit():
+                continue
             if parts[0] == 'Tcp:' and i + 1 < len(lines):
                 headers = parts[1:]
                 values = lines[i + 1].strip().split()[1:]
@@ -119,9 +124,9 @@ class NetworkMonitor:
                 for addr in addrs[name]:
                     if addr.family == psutil.AF_LINK:
                         iface['mac'] = addr.address
-                    elif addr.family == 2:
+                    elif addr.family == socket.AF_INET:
                         iface['ipv4'].append(addr.address)
-                    elif addr.family == 23:
+                    elif addr.family == socket.AF_INET6:
                         iface['ipv6'].append(addr.address)
             result.append(iface)
         return result
@@ -375,7 +380,7 @@ class NetworkMonitor:
             ipv4 = iface['ipv4'][0] if iface['ipv4'] else "—"
             ipv6 = iface['ipv6'][0] if iface['ipv6'] else "—"
             speed = f"{iface['speed']} Mbps" if iface['speed'] > 0 else "—"
-            duplex_map = {0: "Half", 1: "Full", 2: "Unknown"}
+            duplex_map = {0: "Unknown", 1: "Half", 2: "Full"}
             duplex = duplex_map.get(iface['duplex'], "—")
             table.add_row(iface['name'], status, mac, ipv4, ipv6, speed, duplex)
 

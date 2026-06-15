@@ -159,12 +159,24 @@ def heatmap(interval: float, duration: int):
 @click.option('--interfaces', is_flag=True, help='List all network interfaces')
 @click.option('--speed', is_flag=True, help='Show current network speed')
 @click.option('--connections', 'show_connections', is_flag=True, help='Show active TCP connections')
-@click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
-@click.option('--duration', '-d', default=None, type=int, help='Monitoring duration in seconds')
+@click.option('--interval', '-i',
+              type=click.FloatRange(min=0.1, min_open=False),
+              default=1.0,
+              help='Update interval in seconds')
+@click.option('--duration', '-d',
+              type=click.IntRange(min=1, min_open=False),
+              default=None,
+              help='Monitoring duration in seconds')
 @click.option('--export', '-e', is_flag=True, help='Export monitoring data to CSV')
 def network(interfaces: bool, speed: bool, show_connections: bool,
             interval: float, duration: Optional[int], export: bool):
     """[NET] Monitor network interfaces, bandwidth, and connections"""
+    mode_flags = [interfaces, speed, show_connections]
+    if sum(bool(v) for v in mode_flags) > 1:
+        raise click.UsageError(
+            "Use only one of --interfaces, --speed, or --connections"
+        )
+
     try:
         net = NetworkMonitor()
 
