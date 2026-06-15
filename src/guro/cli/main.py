@@ -9,6 +9,7 @@ from .._version import __version__
 from ..core.monitor import SystemMonitor
 from ..core.benchmark import SafeSystemBenchmark
 from ..core.heatmap import SystemHeatmap
+from ..core.network import NetworkMonitor
 
 console = Console()
 
@@ -154,6 +155,37 @@ def heatmap(interval: float, duration: int):
         console.print("[red]Error during heatmap visualization. Check logs for details.[/red]")
 
 
+@cli.command()
+@click.option('--interfaces', is_flag=True, help='List all network interfaces')
+@click.option('--speed', is_flag=True, help='Show current network speed')
+@click.option('--connections', 'show_connections', is_flag=True, help='Show active TCP connections')
+@click.option('--interval', '-i', default=1.0, help='Update interval in seconds')
+@click.option('--duration', '-d', default=None, type=int, help='Monitoring duration in seconds')
+@click.option('--export', '-e', is_flag=True, help='Export monitoring data to CSV')
+def network(interfaces: bool, speed: bool, show_connections: bool,
+            interval: float, duration: Optional[int], export: bool):
+    """🖧 Monitor network interfaces, bandwidth, and connections"""
+    try:
+        net = NetworkMonitor()
+
+        if interfaces:
+            net.list_interfaces()
+        elif speed:
+            net.show_speed()
+        elif show_connections:
+            net.show_connections()
+        else:
+            net.run_dashboard(
+                interval=interval,
+                duration=duration,
+                export=export
+            )
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Network monitoring stopped by user[/yellow]")
+    except Exception:
+        console.print("\n[red]Error during network monitoring. Check logs for details.[/red]")
+
+
 @cli.command(name='list')
 def list_features():
     """📋 List all available features and commands"""
@@ -167,6 +199,7 @@ def list_features():
         "gpu": ("🚀 Dedicated GPU status check", "None"),
         "benchmark": ("🔥 System benchmarking", "-t [mini/god], --gpu-only"),
         "heatmap": ("🌡️ Hardware Heatmap Analysis", "-i, -d"),
+        "network": ("🖧 Network monitoring dashboard", "--interfaces, --speed, --connections"),
         "about": ("ℹ️  About Guro", "None"),
         "list": ("📋 List all commands", "None")
     }
@@ -193,6 +226,7 @@ def about():
 • 💅 Catchy CL Interface
 • 🔥 Performance benchmarking (with Multi-GPU support)
 • 🌡️ Hardware Heatmap Analysis (Hottest component tracking)
+• 🖧 Real-time network monitoring (bandwidth, connections, protocols)
 
 [blue]GitHub:[/blue] https://github.com/dhanushk-offl/guro
 [blue]Website:[/blue] https://guro.pages.dev/
