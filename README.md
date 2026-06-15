@@ -79,6 +79,22 @@ Access Guro via its unified command-line interface.
 
 ---
 
+## Roadmap
+
+🚀 **Coming soon — PRs and ideas are welcome!**
+
+1. **CUDA-based GPU Benchmarks** — Implement native CUDA benchmarks for NVIDIA GPU systems to measure compute performance, memory bandwidth, and thermal characteristics under load.
+2. **Network Monitoring & Benchmarking** — Build a network diagnostics tool similar to Apache Bench (ab) for measuring throughput, latency, and connection performance.
+3. **Network/Storage I/O Monitoring** — Add storage and network I/O monitoring tailored for server environments, including disk throughput, IOPS, and interface-level metrics.
+
+Have an idea or want to contribute? [Open an issue](https://github.com/dhanushk-offl/guro/issues) or start a discussion — all feedback is appreciated.
+
+### Why Funding Matters
+
+Developing and testing system-level tooling requires access to diverse hardware environments — high-end GPU systems, multi-CPU servers, and cloud VMs for cross-platform validation. Funding helps cover the cost of renting these environments to ensure Guro works reliably across Linux, macOS, and Windows.
+
+---
+
 ## Community and Development
 
 Guro is an open-source project that adheres to professional development standards.
@@ -87,7 +103,7 @@ Guro is an open-source project that adheres to professional development standard
 - **Developer Guide**: Comprehensive guidelines can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Architecture**: In-depth module analysis is available in the project documentation.
 - **License**: Released under the MIT License.
-- **Support**: [Buy Me A Coffee](https://buymeacoffee.com/itzmedhanu)
+- **Support**: [GitHub Sponsors](https://github.com/sponsors/dhanushk-offl) · [Buy Me A Coffee](https://buymeacoffee.com/itzmedhanu)
 
 ### Star History
 
