@@ -3,11 +3,15 @@ import threading
 import platform
 import csv
 import datetime
+import urllib.request
+import socket
+import ssl
+import os
 from collections import deque
 from typing import Dict, List, Optional, Tuple
 
 import psutil
-from rich.console import Console
+from rich.console import Console, Group
 from rich.layout import Layout
 from rich.live import Live
 from rich.table import Table
@@ -18,6 +22,19 @@ from rich.align import Align
 
 SPARKLINE_CHARS = ' ▁▂▃▄▅▆▇█'
 SUBPROCESS_TIMEOUT = 5
+SPEED_TEST_DL_URL = "https://speed.cloudflare.com/__down?bytes={}"
+SPEED_TEST_UL_URL = "https://speed.cloudflare.com/__up"
+SPEED_TEST_CHUNK = 262144
+SPEED_TEST_DL_SIZE = 26214400
+SPEED_TEST_UL_SIZE = 10485760
+SPEED_TEST_TIMEOUT = 15
+USE_CASES = [
+    ("4K Streaming", 25),
+    ("8K Streaming", 50),
+    ("Online Gaming", 5),
+    ("Video Calls", 4),
+    ("Web Browsing", 1),
+]
 _SYSTEM = platform.system()
 
 
@@ -264,6 +281,198 @@ class NetworkMonitor:
                 c['remote'][:21],
             )
         return Panel(table, title="🔌 Top Connections", border_style="magenta")
+
+    def _measure_latency(self) -> Dict:
+        result = {'latency_ms': None, 'jitter_ms': None, 'reachable': False}
+        times = []
+        for _ in range(3):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(5)
+                start = time.time()
+                sock.connect(("1.1.1.1", 443))
+                elapsed = (time.time() - start) * 1000
+                sock.close()
+                times.append(elapsed)
+            except (socket.timeout, OSError):
+                pass
+        if times:
+            result['reachable'] = True
+            result['latency_ms'] = min(times)
+            result['jitter_ms'] = max(times) - min(times) if len(times) > 1 else 0
+        return result
+
+    def _download_test(self) -> Dict:
+        result = {'speed_bps': 0, 'speed_mbps': 0, 'samples': [], 'error': None}
+        url = SPEED_TEST_DL_URL.format(SPEED_TEST_DL_SIZE)
+        try:
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': '*/*',
+            })
+            start = time.time()
+            with urllib.request.urlopen(req, timeout=SPEED_TEST_TIMEOUT) as resp:
+                total = 0
+                chunk_start = time.time()
+                while True:
+                    chunk = resp.read(SPEED_TEST_CHUNK)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    now = time.time()
+                    if now - chunk_start >= 0.2:
+                        elapsed = now - chunk_start or 0.001
+                        sample_bps = len(chunk) * 8 / elapsed
+                        result['samples'].append(sample_bps)
+                        chunk_start = now
+            elapsed = time.time() - start
+            if elapsed > 0:
+                result['speed_bps'] = (total * 8) / elapsed
+                result['speed_mbps'] = result['speed_bps'] / 1_000_000
+        except (urllib.error.URLError, socket.timeout, OSError) as e:
+            result['error'] = str(e)
+        return result
+
+    def _upload_test(self) -> Dict:
+        result = {'speed_bps': 0, 'speed_mbps': 0, 'samples': [], 'error': None}
+        data = os.urandom(SPEED_TEST_UL_SIZE)
+        try:
+            req = urllib.request.Request(
+                SPEED_TEST_UL_URL, data=data,
+                headers={
+                    'User-Agent': 'Mozilla/5.0',
+                    'Content-Type': 'application/octet-stream',
+                },
+                method='POST',
+            )
+            start = time.time()
+            with urllib.request.urlopen(req, timeout=SPEED_TEST_TIMEOUT) as resp:
+                total = 0
+                chunk_start = time.time()
+                while True:
+                    chunk = resp.read(SPEED_TEST_CHUNK)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    now = time.time()
+                    if now - chunk_start >= 0.2:
+                        elapsed = now - chunk_start or 0.001
+                        sample_bps = len(chunk) * 8 / elapsed
+                        result['samples'].append(sample_bps)
+                        chunk_start = now
+            elapsed = time.time() - start
+            if elapsed > 0:
+                result['speed_bps'] = (SPEED_TEST_UL_SIZE * 8) / elapsed
+                result['speed_mbps'] = result['speed_bps'] / 1_000_000
+        except (urllib.error.URLError, socket.timeout, OSError) as e:
+            result['error'] = str(e)
+        return result
+
+    def run_speed_test(self, interface_name: Optional[str] = None):
+        interfaces = self.get_interfaces()
+        if interface_name:
+            target = [i for i in interfaces if i['name'] == interface_name]
+        else:
+            target = [i for i in interfaces if i['isup'] and i['ipv4']]
+        if not target:
+            self._console.print("[red]No active network interface found[/red]")
+            return
+        iface = target[0]
+
+        with self._console.status("[bold yellow]Measuring latency..."):
+            latency = self._measure_latency()
+
+        if not latency['reachable']:
+            self._console.print("[red]No internet connection detected[/red]")
+            return
+
+        with self._console.status("[bold yellow]Testing download speed..."):
+            dl = self._download_test()
+            if dl['error']:
+                self._console.print(f"[red]Download test failed: {dl['error']}[/red]")
+
+        with self._console.status("[bold yellow]Testing upload speed..."):
+            ul = self._upload_test()
+            if ul['error']:
+                self._console.print(f"[red]Upload test failed: {ul['error']}[/red]")
+
+        self._print_speed_report(iface, dl, ul, latency)
+
+    def _format_time(self, seconds: float) -> str:
+        m, s = divmod(int(seconds), 60)
+        h, m = divmod(m, 60)
+        if h:
+            return f"{h}h {m}m {s}s"
+        if m:
+            return f"{m}m {s}s"
+        return f"{s}s"
+
+    def _print_speed_report(self, iface: Dict, dl: Dict, ul: Dict, latency: Dict):
+        renderables = []
+
+        adapter_line = f"[bold cyan]{iface['name']}[/bold cyan]"
+        if iface['mac']:
+            adapter_line += f"  MAC: {iface['mac']}"
+        renderables.append(adapter_line)
+
+        ip_line = f"IP: {iface['ipv4'][0] if iface['ipv4'] else '—'}"
+        speed_cap = iface['speed']
+        if speed_cap > 0:
+            ip_line += f"    Max Link: {speed_cap} Mbps"
+        renderables.append(ip_line)
+
+        renderables.append(Text(""))
+
+        dl_mbps = dl.get('speed_mbps', 0)
+        ul_mbps = ul.get('speed_mbps', 0)
+        dl_samples = dl.get('samples', [])
+        ul_samples = ul.get('samples', [])
+
+        speed_table = Table(box=box.SIMPLE, show_header=False)
+        speed_table.add_column(justify="right", width=8)
+        speed_table.add_column(width=22)
+        speed_table.add_column(width=22)
+
+        dl_str = f"[bold green]{dl_mbps:.1f}[/bold green] Mbps" if dl_mbps else "[red]Failed[/red]"
+        ul_str = f"[bold green]{ul_mbps:.1f}[/bold green] Mbps" if ul_mbps else "[red]Failed[/red]"
+        dl_spark = f"[green]{_sparkline([s / 1_000_000 for s in dl_samples], width=15)}[/green]"
+        ul_spark = f"[blue]{_sparkline([s / 1_000_000 for s in ul_samples], width=15)}[/blue]"
+
+        speed_table.add_row("📥 Download", dl_str, dl_spark)
+        speed_table.add_row("📤 Upload", ul_str, ul_spark)
+
+        lat_str = f"{latency['latency_ms']:.0f} ms" if latency['latency_ms'] is not None else "—"
+        jitter_str = f"{latency['jitter_ms']:.0f} ms" if latency['jitter_ms'] is not None else "—"
+        speed_table.add_row("⏱ Latency", f"  {lat_str}", "")
+        speed_table.add_row("📊 Jitter", f"  {jitter_str}", "")
+        renderables.append(speed_table)
+
+        renderables.append(Text(""))
+        renderables.append(Text("[bold]📋 Use Case Suitability[/bold]"))
+
+        cases_table = Table(box=box.SIMPLE, show_header=False)
+        cases_table.add_column(width=28)
+        cases_table.add_column(width=20)
+        dl_mbps_val = dl_mbps if dl_mbps > 0 else 0
+
+        for name, threshold in USE_CASES:
+            status = "✅ [green]Supported[/green]" if dl_mbps_val >= threshold else "❌ [red]Needs faster speed[/red]"
+            cases_table.add_row(f"  {name} ({threshold} Mbps)", status)
+
+        if dl_mbps_val > 0:
+            per_gb_sec = (8 * 1024) / (dl_mbps_val * 1_000_000 / 8) if dl_mbps_val > 0 else 0
+            per_10gb_sec = per_gb_sec * 10
+            cases_table.add_row("")
+            cases_table.add_row("  💾 1 GB file", f"~{self._format_time(per_gb_sec)}")
+            cases_table.add_row("  💾 10 GB file", f"~{self._format_time(per_10gb_sec)}")
+
+        renderables.append(cases_table)
+
+        self._console.print(Panel(
+            Group(*renderables),
+            title="🌐 Network Speed Test Report",
+            border_style="blue",
+        ))
 
     def export_csv(self, filepath: Optional[str] = None):
         if not self._export_data:
