@@ -8,6 +8,7 @@ Welcome to the technical documentation for Guro. This wiki provides in-depth ana
 - [System Monitoring Architecture](Architecture-Monitoring.md)
 - [Thermal Analysis Methodology](Architecture-Thermal.md)
 - [Benchmarking Protocols](Architecture-Benchmarking.md)
+- [Network Monitoring Architecture](Architecture-Network.md)
 - [Platform Implementation Details](Platform-Support.md)
 - [Troubleshooting and Diagnostics](Troubleshooting.md)
 
@@ -19,7 +20,7 @@ Welcome to the technical documentation for Guro. This wiki provides in-depth ana
 
 ## Project Vision
 
-Guro is designed to provide high-fidelity system telemetry in a lightweight, terminal-based format. By prioritizing robust data acquisition and structured visualization, Guro serves as a reliable diagnostic bridge between low-level system sensors and the end-user.
+Guro is designed to provide high-fidelity system telemetry in a lightweight, terminal-based format — including real-time network bandwidth monitoring, TCP state analysis, and connection tracking. By prioritizing robust data acquisition and structured visualization, Guro serves as a reliable diagnostic bridge between low-level system sensors and the end-user.
 
 ## Technical Standards
 

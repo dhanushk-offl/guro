@@ -89,11 +89,11 @@ class TestHeatmapMultiGPU:
 class TestVersionConsistency:
     """Test that version is consistent across all modules."""
 
-    def test_version_is_1_1_4(self):
-        assert __version__ == "1.1.5"
+    def test_version_is_1_1_6(self):
+        assert __version__ == "1.1.6"
 
     @patch('guro.core.monitor.GPUDetector.get_all_gpus', return_value={'available': False, 'gpus': []})
     def test_cli_version_matches(self, _):
         """Test that CLI uses the same version from _version.py."""
         from guro._version import __version__ as pkg_version
-        assert pkg_version == "1.1.5"
+        assert pkg_version == "1.1.6"

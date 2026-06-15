@@ -117,6 +117,10 @@
         <div class="t-out">GPU  Core     <span style="color:#ffb340">58°C</span>  ◆</div>
         <div class="t-out ok">SSD  NVMe    <span style="color:#00e57a">38°C</span>  ●</div>
         <br>
+        <div><span class="t-prompt">$</span> <span class="t-cmd">guro network --speed</span></div>
+        <div class="t-out hi">▶ eth0 ↑ 1.2 MB/s  ↓ 3.4 MB/s</div>
+        <div class="t-out">wlan0 ↑ 0.1 MB/s  ↓ 0.2 MB/s</div>
+        <br>
         <div><span class="t-prompt">$</span> <span class="t-cursor"></span></div>
       </div>
     </div>
@@ -166,6 +170,14 @@
           and driver version across all detected graphics hardware.
         </p>
       </div>
+      <div class="feat-card fade-up">
+        <span class="feat-icon">🌐</span>
+        <div class="feat-name">Network Intelligence</div>
+        <p class="feat-desc">
+          Real-time bandwidth monitoring with per-interface upload/download sparklines,
+          TCP state distribution, and process-level connection tracking.
+        </p>
+      </div>
     </div>
   </div>
 </section>
@@ -206,6 +218,13 @@
         <div class="cmd-info">
           <div class="cmd-name">System Benchmark</div>
           <div class="cmd-desc">High-load stability and speed testing with thermal safety monitoring.</div>
+        </div>
+      </div>
+      <div class="cmd-row fade-up">
+        <span class="cmd-badge">guro network</span>
+        <div class="cmd-info">
+          <div class="cmd-name">Network Dashboard</div>
+          <div class="cmd-desc">Real-time bandwidth, adapter specs, TCP states, and active connections — <code>--speed</code>, <code>--interfaces</code>, <code>--connections</code> flags available.</div>
         </div>
       </div>
     </div>
