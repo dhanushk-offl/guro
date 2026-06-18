@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docs — Guro</title>
+  <meta name="description" content="Guro technical documentation." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo" style="display:flex;align-items:center">
+    <span class="b">[</span> guro <span class="b">]</span>
+    <span class="nav-version" id="nav-version">—</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="docs.html" class="active">Docs</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="https://github.com/dhanushk-offl/guro" target="_blank">GitHub</a></li>
+  </ul>
+  <a href="https://github.com/dhanushk-offl/guro" target="_blank" class="nav-cta">GitHub ↗</a>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-label">Getting Started</div>
+      <ul class="docs-sidebar-links" data-section="start">
+        <li><a href="#Home.md" class="active">Overview</a></li>
+        <li><a href="#Platform-Support.md">Installation</a></li>
+        <li><a href="#quickstart">Quick Start</a></li>
+      </ul>
+    </div>
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-label">Commands</div>
+      <ul class="docs-sidebar-links" data-section="commands">
+        <li><a href="#Architecture-Monitoring.md">guro monitor</a></li>
+        <li><a href="#Architecture-Thermal.md">guro heatmap</a></li>
+        <li><a href="#gpu">guro gpu</a></li>
+        <li><a href="#Architecture-Benchmarking.md">guro benchmark</a></li>
+        <li><a href="#Architecture-Network.md">guro network</a></li>
+      </ul>
+    </div>
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-label">Platform</div>
+      <ul class="docs-sidebar-links" data-section="platform">
+        <li><a href="#Platform-Support.md">Compatibility</a></li>
+        <li><a href="#Troubleshooting.md">Troubleshooting</a></li>
+      </ul>
+    </div>
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-label">Contributing</div>
+      <ul class="docs-sidebar-links">
+        <li><a href="#contributing">How to Contribute</a></li>
+        <li><a href="https://github.com/dhanushk-offl/guro/blob/master/CONTRIBUTING.md" target="_blank">CONTRIBUTING.md ↗</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="docs-content" id="docs-content">
+    <div class="docs-loading">
+      <div class="spinner"></div>
+      Loading documentation...
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+</script>
+<script>
+const GITHUB_OWNER = 'dhanushk-offl';
+const GITHUB_REPO = 'guro';
+const WIKI_PATH = 'docs/wiki';
+const BRANCH = 'master';
+const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${BRANCH}/${WIKI_PATH}`;
+const API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${WIKI_PATH}`;
+
+const contentEl = document.getElementById('docs-content');
+const sidebarLinks = document.querySelectorAll('.docs-sidebar-links a');
+let fileList = [];
+let currentFile = null;
+
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+  return String(n);
+}
+
+function buildInlineContent(name) {
+  if (name === 'quickstart') {
+    return `# Quick Start
+
+After installing, run your first monitor session:
+
+\`\`\`
+$ guro monitor
+\`\`\`
+
+Or jump into a thermal heatmap:
+
+\`\`\`
+$ guro heatmap --duration 30
+\`\`\`
+
+List all available commands:
+
+\`\`\`
+$ guro list
+\`\`\`
+
+### Pro Tips
+
+- Use \`--interval 0.5\` for faster sampling on \`guro monitor\`
+- Export any session to CSV with \`--export output.csv\`
+- Press \`Ctrl+C\` to stop any running command safely
+
+### Useful Aliases
+
+Add these to your \`~/.bashrc\` or \`~/.zshrc\`:
+
+\`\`\`bash
+alias gstat='guro monitor --interval 0.5'
+alias gheat='guro heatmap --duration 15'
+alias gbench='guro benchmark --type mini'
+\`\`\``;
+  }
+  if (name === 'gpu') {
+    return `# guro gpu
+
+Executes a full diagnostic report for all detected graphics adapters.
+
+\`\`\`
+$ guro gpu
+\`\`\`
+
+### Supported Hardware
+
+| GPU Vendor | Support | Dependency |
+|------------|---------|------------|
+| **NVIDIA** | Full | \`nvidia-smi\` (included with drivers) |
+| **AMD** | Supported | System sensors + ROCm (Linux) |
+| **Intel** | Basic | Integrated graphics |
+
+### Output Includes
+
+- GPU model and architecture
+- VRAM used / total
+- Core temperature
+- Utilization percentage
+- Driver version
+- Power draw (where available)
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| \`--json\` | Output as JSON for scripting |
+| \`--watch\` | Continuously poll every 2 seconds |`;
+  }
+  if (name === 'contributing') {
+    return `# Contributing to Guro
+
+Guro is open source under the MIT license. Contributions, bug reports, and feature ideas are welcome.
+
+### Getting Started
+
+1. **Fork** the repository on GitHub
+2. **Clone** your fork locally:
+   \`\`\`
+   git clone https://github.com/YOUR_USERNAME/guro.git
+   cd guro
+   \`\`\`
+3. **Create a virtual environment**:
+   \`\`\`
+   python -m venv venv
+   source venv/bin/activate
+   pip install -e ".[test]"
+   \`\`\`
+4. **Create a feature branch**:
+   \`\`\`
+   git checkout -b feat/your-feature
+   \`\`\`
+
+### Development Guidelines
+
+- Keep core logic decoupled from the CLI interface
+- Use \`unittest.mock\` for hardware simulation in tests
+- Ensure PEP 8 compliance
+- Write tests for new functionality
+
+### Run Tests
+
+\`\`\`
+python -m pytest tests/
+\`\`\`
+
+### Submit a Pull Request
+
+1. Push your branch to your fork
+2. Open a PR against the \`main\` branch
+3. Describe your changes clearly
+4. Ensure all CI checks pass
+
+### Need Help?
+
+- Read the full [CONTRIBUTING.md](https://github.com/dhanushk-offl/guro/blob/master/CONTRIBUTING.md)
+- Open an [issue](https://github.com/dhanushk-offl/guro/issues) for bugs
+- Start a [discussion](https://github.com/dhanushk-offl/guro/discussions) for ideas`;
+  }
+  return null;
+}
+
+async function loadFileList() {
+  try {
+    const res = await fetch(API_URL, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const data = await res.json();
+    fileList = data.filter(f => f.name.endsWith('.md') && f.type === 'file');
+
+    const hash = location.hash.replace('#', '');
+    if (hash && fileList.some(f => f.name === hash)) {
+      loadFile(hash);
+    } else if (['quickstart', 'gpu', 'contributing'].includes(hash)) {
+      loadFile(hash);
+    } else {
+      loadFile('Home.md');
+    }
+  } catch (e) {
+    contentEl.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:80px 0">Failed to load documentation: ${e.message}</p>`;
+  }
+}
+
+function highlightNav(file) {
+  sidebarLinks.forEach(l => l.classList.remove('active'));
+  sidebarLinks.forEach(l => {
+    const href = l.getAttribute('href').replace('#', '');
+    if (href === file) l.classList.add('active');
+  });
+}
+
+async function loadFile(filename) {
+  currentFile = filename;
+  contentEl.innerHTML = '<div class="docs-loading"><div class="spinner"></div>Loading...</div>';
+  highlightNav(filename);
+
+  try {
+    const inline = buildInlineContent(filename);
+    if (inline) {
+      const html = marked.parse(inline, { breaks: true });
+      contentEl.innerHTML = html;
+      return;
+    }
+
+    const res = await fetch(`${RAW_BASE}/${filename}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const md = await res.text();
+    const html = marked.parse(md, { breaks: true });
+    contentEl.innerHTML = html;
+
+    contentEl.querySelectorAll('a').forEach(a => {
+      const href = a.getAttribute('href');
+      if (href && href.endsWith('.md')) {
+        const target = href.split('/').pop();
+        if (fileList.some(f => f.name === target)) {
+          a.setAttribute('href', '#' + target);
+          a.addEventListener('click', e => {
+            e.preventDefault();
+            loadFile(target);
+            history.pushState(null, '', '#' + target);
+          });
+        } else {
+          a.setAttribute('href', `${RAW_BASE}/${target}`);
+          a.setAttribute('target', '_blank');
+        }
+      }
+    });
+  } catch (e) {
+    contentEl.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:80px 0">Failed to load: ${e.message}</p>`;
+  }
+}
+
+sidebarLinks.forEach(a => {
+  a.addEventListener('click', e => {
+    const href = a.getAttribute('href');
+    if (href.startsWith('http')) return;
+    e.preventDefault();
+    const file = href.replace('#', '');
+    if (file !== currentFile) {
+      loadFile(file);
+      history.pushState(null, '', '#' + file);
+    }
+  });
+});
+
+window.addEventListener('popstate', () => {
+  const hash = location.hash.replace('#', '');
+  if (hash && (fileList.some(f => f.name === hash) || ['quickstart', 'gpu', 'contributing'].includes(hash))) {
+    loadFile(hash);
+  }
+});
+
+function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+async function loadVersion() {
+  try {
+    const res = await fetch('https://pypi.org/pypi/guro/json');
+    if (res.ok) { const p = await res.json(); setEl('nav-version', 'v' + p.info.version); }
+  } catch {}
+}
+
+loadFileList();
+loadVersion();
+</script>
+<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="itzmedhanu" data-description="Support me on Buy me a coffee!" data-message="" data-color="#40DCA5" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+</body>
+</html>

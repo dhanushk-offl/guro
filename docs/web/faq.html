@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ — Guro</title>
+  <meta name="description" content="Frequently asked questions about Guro." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo" style="display:flex;align-items:center">
+    <span class="b">[</span> guro <span class="b">]</span>
+    <span class="nav-version" id="nav-version">—</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="faq.html" class="active">FAQ</a></li>
+    <li><a href="https://github.com/dhanushk-offl/guro" target="_blank">GitHub</a></li>
+  </ul>
+  <a href="https://github.com/dhanushk-offl/guro" target="_blank" class="nav-cta">GitHub ↗</a>
+</nav>
+
+<div class="faq-hero">
+  <span class="page-tag">FAQ</span>
+  <h1>Frequently asked questions.</h1>
+  <p>Quick answers to the most common questions about installing, using, and understanding Guro.</p>
+</div>
+
+<div class="faq-body">
+  <div class="faq-search">
+    <input type="text" id="faq-search" placeholder="Search questions…" oninput="filterFAQ(this.value)">
+  </div>
+  <div class="faq-no-results" id="faq-no-results">
+    No matching questions. Try different keywords or <a href="https://github.com/dhanushk-offl/guro/issues" target="_blank">open an issue</a>.
+  </div>
+
+  <div class="faq-category" data-cat="installation">
+    <span class="faq-cat-label">Installation</span>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I install Guro? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>The simplest way is via pip:</p>
+        <pre>pip install guro</pre>
+        <p>For a cleaner global install on Linux/macOS, use pipx:</p>
+        <pre>pipx install guro</pre>
+        <p>On Windows, use a virtual environment:</p>
+        <pre>python -m venv guro_env
+guro_env\Scripts\activate
+pip install guro</pre>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Does Guro need admin privileges? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>No. Most features run as a normal user. The only exception is the first-time <code>sensors-detect</code> setup on Linux, which needs <code>sudo</code> — that's a one-time system configuration, not Guro itself.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What Python version does Guro require? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Python 3.8 or newer. Guro uses only standard modern Python — no legacy compatibility hacks.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can I use Guro inside Docker or a VM? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Yes. CPU and memory monitoring work fully inside containers and VMs. Thermal sensors and GPU access depend on whether the host exposes those to the container. For bare-metal data, run Guro directly on the host.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="faq-category" data-cat="usage">
+    <span class="faq-cat-label">Usage</span>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I start monitoring my system? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Just run:</p>
+        <pre>guro monitor</pre>
+        <p>This starts an interactive dashboard. Use <code>--interval</code> to control sampling rate and <code>--duration</code> to set a time limit. Press Ctrl+C to stop at any time.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I export data to CSV? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Pass the <code>--export</code> flag with a filename:</p>
+        <pre>guro monitor --duration 120 --export session.csv</pre>
+        <p>The CSV will contain timestamps alongside all sampled metrics for offline analysis.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What's the difference between mini and god benchmarks? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p><strong>mini</strong> is a quick sanity check — moderate load for a short duration, good for a fast performance snapshot.</p>
+        <p><strong>god</strong> is maximum sustained load — designed to stress-test thermal limits, power delivery, and CPU/GPU stability over a longer period.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can Guro monitor just CPU or just GPU? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>For benchmarks, yes — use <code>--cpu-only</code> or <code>--gpu-only</code>:</p>
+        <pre>guro benchmark --type mini --cpu-only
+guro benchmark --type god --gpu-only</pre>
+        <p>For dedicated GPU diagnostics, use <code>guro gpu</code> which gives a full status report for all detected adapters.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I see all available commands? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <pre>guro list</pre>
+        <p>This prints a formatted summary of every command and its options.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="faq-category" data-cat="platform">
+    <span class="faq-cat-label">Platform & Compatibility</span>
+
+    <div class="faq-item">
+      <button class="faq-q">Which operating systems does Guro support? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Guro supports <strong>Linux</strong>, <strong>macOS</strong>, and <strong>Windows</strong>. All core features work on all three platforms.</p>
+        <ul>
+          <li>Thermal heatmaps are best on Linux via lm-sensors</li>
+          <li>Windows uses WMI for thermal data — no extra install needed</li>
+          <li>macOS thermal readings are limited by OS restrictions</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Thermal heatmap shows no sensors on Linux — how do I fix this? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Install and configure lm-sensors:</p>
+        <pre>sudo apt install lm-sensors
+sudo sensors-detect</pre>
+        <p>Run <code>sensors</code> after setup to verify your hardware is detected. Then try <code>guro heatmap</code> again.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Does Guro work on ARM devices like Raspberry Pi? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Yes. Anywhere Python 3.8+ runs, Guro runs. ARM-based systems (Raspberry Pi, Apple Silicon via native Python, Jetson Nano) are fully supported. Some thermal sensors may differ by device.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Which GPU brands are supported? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <ul>
+          <li><strong>NVIDIA</strong> — Full support via <code>nvidia-smi</code></li>
+          <li><strong>AMD</strong> — Supported via system sensors and ROCm where available</li>
+          <li><strong>Intel / Integrated</strong> — Basic diagnostics available</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Does Guro work with conda, Poetry, or other package managers? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Yes. Guro is a standard PyPI package and works with any Python environment manager:</p>
+        <pre>conda install pip && pip install guro   # conda
+poetry add guro                          # Poetry
+pipx install guro                        # pipx (recommended)</pre>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="faq-category" data-cat="general">
+    <span class="faq-cat-label">General</span>
+
+    <div class="faq-item">
+      <button class="faq-q">Is Guro free? What's the license? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>100% free and open source. Guro is released under the <strong>MIT License</strong> — use it commercially, fork it, embed it, no strings attached. See the <a href="https://github.com/dhanushk-offl/guro/blob/master/LICENSE" target="_blank">full license</a>.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I report a bug or request a feature? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Open an issue on <a href="https://github.com/dhanushk-offl/guro/issues" target="_blank">GitHub Issues</a>. For feature ideas, use <a href="https://github.com/dhanushk-offl/guro/discussions" target="_blank">GitHub Discussions</a>.</p>
+        <p>Please include your OS, Python version, and the full error output when reporting bugs.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How can I contribute? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>Read <a href="https://github.com/dhanushk-offl/guro/blob/master/CONTRIBUTING.md" target="_blank">CONTRIBUTING.md</a> for the full guide. In short: fork the repo, create a branch, make your changes, and open a pull request.</p>
+        <p>You can also support the project by starring it on GitHub or <a href="https://buymeacoffee.com/itzmedhanu" target="_blank">buying Dhanush a coffee ☕</a>.</p>
+      </div></div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Does Guro send any data externally? <span class="faq-chevron">▾</span></button>
+      <div class="faq-a"><div class="faq-a-inner">
+        <p>No. Guro is purely local. All data is read from your own hardware sensors and displayed in your terminal. Nothing is transmitted, stored in the cloud, or shared anywhere.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="faq-cta">
+    <h3>Still have questions?</h3>
+    <p>Check the documentation or open an issue on GitHub.</p>
+    <a href="docs.html" class="btn btn-primary" style="display:inline-flex">Read the Docs</a>
+    <a href="https://github.com/dhanushk-offl/guro/issues" target="_blank" class="btn btn-ghost" style="display:inline-flex">Open an Issue ↗</a>
+  </div>
+</div>
+
+<footer>
+  <span>Built by <a href="https://github.com/dhanushk-offl">Dhanush Kandhan</a> &middot; MIT License</span>
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="docs.html">Docs</a>
+    <a href="https://github.com/dhanushk-offl/guro">GitHub</a>
+    <a href="https://pypi.org/project/guro/">PyPI</a>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.faq-q').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  });
+});
+
+function filterFAQ(query) {
+  const q = query.toLowerCase().trim();
+  let anyVisible = false;
+  document.querySelectorAll('.faq-item').forEach(item => {
+    const text = item.textContent.toLowerCase();
+    const match = !q || text.includes(q);
+    item.style.display = match ? '' : 'none';
+    if (match) anyVisible = true;
+  });
+  document.querySelectorAll('.faq-category').forEach(cat => {
+    const visible = [...cat.querySelectorAll('.faq-item')].some(i => i.style.display !== 'none');
+    cat.style.display = visible ? '' : 'none';
+  });
+  document.getElementById('faq-no-results').style.display = anyVisible ? 'none' : 'block';
+}
+
+function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+async function loadVersion() {
+  try {
+    const res = await fetch('https://pypi.org/pypi/guro/json');
+    if (res.ok) { const p = await res.json(); setEl('nav-version', 'v' + p.info.version); }
+  } catch {}
+}
+
+loadVersion();
+</script>
+<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="itzmedhanu" data-description="Support me on Buy me a coffee!" data-message="" data-color="#40DCA5" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+</body>
+</html>
