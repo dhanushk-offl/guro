@@ -12,7 +12,7 @@
 <nav>
   <a href="index.html" class="nav-logo" style="display:flex;align-items:center">
     <span class="b">[</span> guro <span class="b">]</span>
-    <span class="nav-version" id="nav-version">—</span>
+    <span class="nav-version skeleton" id="nav-version">—</span>
   </a>
   <ul class="nav-links">
     <li><a href="docs.html">Docs</a></li>
@@ -39,19 +39,19 @@
       </div>
       <div class="hero-stats">
         <div class="stat">
-          <span class="stat-val" id="stat-version">—</span>
+          <span class="stat-val skeleton" id="stat-version">—</span>
           <span class="stat-lbl">Latest version</span>
         </div>
         <div class="stat">
-          <span class="stat-val" id="stat-stars">—</span>
+          <span class="stat-val skeleton" id="stat-stars">—</span>
           <span class="stat-lbl">GitHub stars</span>
         </div>
         <div class="stat">
-          <span class="stat-val" id="stat-monthly">—</span>
+          <span class="stat-val skeleton" id="stat-monthly">—</span>
           <span class="stat-lbl">Downloads / mo</span>
         </div>
         <div class="stat">
-          <span class="stat-val" id="stat-total">—</span>
+          <span class="stat-val skeleton" id="stat-total">—</span>
           <span class="stat-lbl">Total downloads</span>
         </div>
       </div>
@@ -264,19 +264,19 @@
     </div>
     <div class="dl-grid">
       <div class="dl-card">
-        <span class="dl-val" id="dl-day">—</span>
+        <span class="dl-val skeleton" id="dl-day">—</span>
         <span class="dl-lbl">Today</span>
       </div>
       <div class="dl-card">
-        <span class="dl-val" id="dl-week">—</span>
+        <span class="dl-val skeleton" id="dl-week">—</span>
         <span class="dl-lbl">This week</span>
       </div>
       <div class="dl-card">
-        <span class="dl-val" id="dl-month">—</span>
+        <span class="dl-val skeleton" id="dl-month">—</span>
         <span class="dl-lbl">This month</span>
       </div>
       <div class="dl-card">
-        <span class="dl-val" id="dl-total">—</span>
+        <span class="dl-val skeleton" id="dl-total">—</span>
         <span class="dl-lbl">All time</span>
       </div>
     </div>
@@ -330,15 +330,15 @@
       </div>
       <div class="support-stats">
         <div class="sup-item">
-          <span class="sup-val" id="ss-stars">—</span>
+          <span class="sup-val skeleton" id="ss-stars">—</span>
           <span class="sup-lbl">Stars</span>
         </div>
         <div class="sup-item">
-          <span class="sup-val" id="ss-downloads">—</span>
+          <span class="sup-val skeleton" id="ss-downloads">—</span>
           <span class="sup-lbl">Downloads / mo</span>
         </div>
         <div class="sup-item">
-          <span class="sup-val" id="ss-total">—</span>
+          <span class="sup-val skeleton" id="ss-total">—</span>
           <span class="sup-lbl">Total</span>
         </div>
       </div>
@@ -363,7 +363,7 @@ function fmt(n) {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
   return String(n);
 }
-function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function setEl(id, val) { const el = document.getElementById(id); if (el) { el.textContent = val; el.classList.remove('skeleton'); } }
 
 async function loadStats() {
   const load = async (url, opts) => { try { const r = await fetch(url, opts); return r.ok ? r : null; } catch { return null; } };

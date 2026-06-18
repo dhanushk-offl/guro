@@ -7,6 +7,7 @@
   --text: #1A1A1A; --text-secondary: #6B6B6B; --text-muted: #9C9C96;
   --accent: #059669; --accent-light: #ECFDF5; --accent-ring: rgba(5, 150, 105, 0.12);
   --radius: 8px; --radius-lg: 12px;
+  --skeleton: linear-gradient(90deg, var(--border) 25%, #f0f0ee 50%, var(--border) 75%);
   --mono: 'JetBrains Mono', monospace;
   --sans: 'Inter', system-ui, sans-serif;
   --heading: 'Space Grotesk', sans-serif;
@@ -19,6 +20,18 @@ body {
 }
 a { color: inherit; text-decoration: none; }
 ::selection { background: var(--accent); color: #fff; }
+
+.skeleton {
+  display: inline-block;
+  min-width: 48px; height: 1.1em;
+  border-radius: 4px;
+  background: var(--skeleton);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  vertical-align: middle;
+  color: transparent !important;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 nav {
   position: sticky; top: 0; z-index: 100;
