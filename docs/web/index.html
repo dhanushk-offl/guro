@@ -3,598 +3,422 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Guro — Terminal System Toolkit</title>
-  <meta name="description" content="Sophisticated terminal-based diagnostic toolkit for granular system resource monitoring and hardware analysis." />
+  <title>Guro — System Toolkit</title>
+  <meta name="description" content="Terminal-based diagnostic toolkit for system resource monitoring and hardware analysis." />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- ══ NAVBAR ══ -->
-<nav id="navbar">
-  <div class="nav-logo">
-    <span class="bracket">[</span>guro<span class="bracket">]</span>
-  </div>
-  <ul class="nav-links" id="nav-links">
-    <li><a href="#features"     onclick="closeMenu()">features</a></li>
-    <li><a href="#commands"     onclick="closeMenu()">commands</a></li>
-    <li><a href="#install"      onclick="closeMenu()">install</a></li>
-    <li><a href="#contributing" onclick="closeMenu()">contribute</a></li>
-    <li><a href="#support"      onclick="closeMenu()">support</a></li>
-    <!-- mobile-only cta inside menu -->
-    <li class="nav-mobile-cta">
-      <a href="https://github.com/dhanushk-offl/guro" target="_blank" onclick="closeMenu()">★ GitHub</a>
-      <a href="https://pypi.org/project/guro/" target="_blank" onclick="closeMenu()">PyPI →</a>
-    </li>
+<nav>
+  <a href="index.html" class="nav-logo" style="display:flex;align-items:center">
+    <span class="b">[</span> guro <span class="b">]</span>
+    <span class="nav-version skeleton" id="nav-version">—</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="https://github.com/dhanushk-offl/guro" target="_blank">GitHub</a></li>
   </ul>
-  <div class="nav-right">
-    <div class="nav-cta">
-      <a href="https://github.com/dhanushk-offl/guro" target="_blank">
-        <button class="btn-sm">★ GitHub</button>
-      </a>
-      <a href="https://pypi.org/project/guro/" target="_blank">
-        <button class="btn-sm primary">PyPI →</button>
-      </a>
-    </div>
-    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
+  <a href="https://github.com/dhanushk-offl/guro" target="_blank" class="nav-cta">GitHub ↗</a>
 </nav>
 
-<!-- ══ HERO ══ -->
-<section class="hero" id="home">
-  <div class="hero-glow"></div>
+<section class="hero">
   <div class="hero-inner">
-    <!-- left copy -->
-    <div class="hero-copy">
-      <div class="hero-tag">open source · python · terminal</div>
-      <h1 class="hero-title">
-        System<br>
-        <span class="line2">Monitor.</span>
-      </h1>
-      <p class="hero-subtitle">
-        <span class="hl">Guro</span> is a sophisticated terminal-based diagnostic toolkit
-        for <span class="hl">granular resource monitoring</span>, thermal analysis,
-        and hardware benchmarking — built for engineers who live in the CLI.
+    <div>
+      <h1>System monitoring<br><span class="hl">from the terminal.</span></h1>
+      <p>
+        Guro is a real-time diagnostic toolkit for CPU, memory, thermal, GPU, and network analysis — built for engineers who live in the CLI.
+        <span class="py-badge" style="margin-left:8px;vertical-align:middle">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          100% Python
+        </span>
       </p>
       <div class="hero-actions">
-        <a href="#install">
-          <button class="btn btn-primary">
-            <span class="mono">pip install guro</span>
+        <a href="#install"><button class="btn btn-primary">pip install guro</button></a>
+        <a href="https://github.com/dhanushk-offl/guro" target="_blank"><button class="btn btn-ghost">View on GitHub</button></a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-val skeleton" id="stat-version">—</span>
+          <span class="stat-lbl">Latest version</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val skeleton" id="stat-stars">—</span>
+          <span class="stat-lbl">GitHub stars</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val skeleton" id="stat-monthly">—</span>
+          <span class="stat-lbl">Downloads / mo</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val skeleton" id="stat-total">—</span>
+          <span class="stat-lbl">Total downloads</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="terminal">
+        <div class="term-dots">
+          <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+        </div>
+        <div class="term-body">
+          <div><span class="tp">$</span> <span class="tc">pip install guro</span></div>
+          <div class="to">Collecting guro...</div>
+          <div class="to ok">Successfully installed guro</div>
+          <br>
+          <div><span class="tp">$</span> <span class="tc">guro monitor</span></div>
+          <div class="to hi">Initializing dashboard...</div>
+          <div class="to">CPU ████████████░░░ 78%</div>
+          <div class="to">MEM ██████░░░░░░░░░ 42%</div>
+          <div class="to ok">Cores [0-7]: ▃▇▅▆▂▇▄▅</div>
+          <br>
+          <div><span class="tp">$</span> <span class="tc">guro network --speed</span></div>
+          <div class="to hi">eth0 ↑ 1.2 MB/s  ↓ 3.4 MB/s</div>
+          <br>
+          <div><span class="tp">$</span><span class="cursor"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-tag">Features</span>
+      <h2>Everything you need, nothing you don't.</h2>
+      <p>Cross-platform. Linux, macOS, Windows. Desktop-class diagnostics in your terminal.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feat">
+        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h3>Performance Telemetry</h3>
+        <p>Real-time CPU core utilization, memory envelopes, and process monitoring with live ASCII trend graphs.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76a3.5 3.5 0 0 1-4 0"/><path d="M16 16a6 6 0 0 1-8 0"/><path d="M12 2a10 10 0 1 0 10 10h-10V2Z"/></svg></div>
+        <h3>Thermal Intelligence</h3>
+        <p>Spatial temperature mapping across hardware components with synchronized trend analysis.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <h3>Hardware Benchmarking</h3>
+        <p>Safety-first stress testing with thermal threshold awareness for CPU and GPU solutions.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h3>GPU Diagnostics</h3>
+        <p>Comprehensive GPU status with memory, temperature, utilization, and driver information.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="2 12 6 12 9 3 15 21 18 12 22 12"/></svg></div>
+        <h3>Network Intelligence</h3>
+        <p>Real-time bandwidth monitoring, TCP state analysis, and process-level connection tracking.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="use-cases" class="alt">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-tag">Use Cases</span>
+      <h2>Who uses Guro?</h2>
+      <p>From sysadmins to embedded engineers — Guro is built for anyone who needs real-time system insight.</p>
+    </div>
+    <div class="use-cases-grid">
+      <div class="uc-card">
+        <div class="uc-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h3>System Administrators</h3>
+        <p>Monitor server performance, track thermal health, and diagnose bottlenecks — all over SSH with zero GUI overhead.</p>
+      </div>
+      <div class="uc-card">
+        <div class="uc-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <h3>DevOps Engineers</h3>
+        <p>Integrate into CI/CD pipelines for hardware health checks, benchmark regressions, and pre-deployment validation.</p>
+      </div>
+      <div class="uc-card">
+        <div class="uc-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76a3.5 3.5 0 0 1-4 0"/><path d="M16 16a6 6 0 0 1-8 0"/><path d="M12 2a10 10 0 1 0 10 10h-10V2Z"/></svg></div>
+        <h3>Hardware Enthusiasts</h3>
+        <p>Validate overclocks, test thermal solutions, and benchmark performance across CPU and GPU configurations.</p>
+      </div>
+      <div class="uc-card">
+        <div class="uc-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/><rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/></svg></div>
+        <h3>Embedded Developers</h3>
+        <p>Monitor resource usage on Raspberry Pi, Jetson Nano, and other ARM SBCs directly from the terminal.</p>
+      </div>
+      <div class="uc-card">
+        <div class="uc-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <h3>Performance Engineers</h3>
+        <p>Analyze CPU scheduling, memory access patterns, and thermal throttling under sustained workloads.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="runs-everywhere">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-tag">Runs Everywhere</span>
+      <h2>Wherever Python lives,<br>Guro runs.</h2>
+      <p>Zero platform lock-in. One command on any device with Python 3.8+.</p>
+    </div>
+    <div class="runs-grid">
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M16 20h2a2 2 0 0 0 2-2v-2"/></svg></div>
+        <h4>Linux</h4>
+        <p>Ubuntu, Debian, Fedora, Arch</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/></svg></div>
+        <h4>macOS</h4>
+        <p>Intel & Apple Silicon</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 15h6"/></svg></div>
+        <h4>Windows</h4>
+        <p>10 & 11, Server</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <h4>Raspberry Pi</h4>
+        <p>Pi 3, 4, 5 & Zero 2W</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg></div>
+        <h4>Jetson Nano</h4>
+        <p>NVIDIA Edge AI</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h4>NVIDIA DGX</h4>
+        <p>Server & cloud</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div>
+        <h4>Docker</h4>
+        <p>Containers & VMs</p>
+      </div>
+      <div class="run-card">
+        <div class="run-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <h4>Any x86/ARM</h4>
+        <p>Where Python 3.8+ runs</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="commands" class="alt">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-tag">Commands</span>
+      <h2>One CLI, everything you need.</h2>
+      <p>Access all capabilities through a unified interface.</p>
+    </div>
+    <div class="cmds">
+      <div class="cmd">
+        <code class="cmd-badge">guro monitor</code>
+        <div class="cmd-info">
+          <strong>Performance Dashboard</strong>
+          <span>Interactive system monitoring with CPU, memory, and process views.</span>
+        </div>
+      </div>
+      <div class="cmd">
+        <code class="cmd-badge">guro heatmap</code>
+        <div class="cmd-info">
+          <strong>Thermal Heatmap</strong>
+          <span>Spatial temperature mapping with historical trend analysis.</span>
+        </div>
+      </div>
+      <div class="cmd">
+        <code class="cmd-badge">guro gpu</code>
+        <div class="cmd-info">
+          <strong>GPU Diagnostics</strong>
+          <span>Full diagnostic report for all detected graphics processing units.</span>
+        </div>
+      </div>
+      <div class="cmd">
+        <code class="cmd-badge">guro benchmark</code>
+        <div class="cmd-info">
+          <strong>System Benchmark</strong>
+          <span>High-load stability testing with thermal safety monitoring.</span>
+        </div>
+      </div>
+      <div class="cmd">
+        <code class="cmd-badge">guro network</code>
+        <div class="cmd-info">
+          <strong>Network Dashboard</strong>
+          <span>Real-time bandwidth, adapters, TCP states, and connections.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="downloads">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-tag">Downloads</span>
+      <h2>Adopted by the community.</h2>
+      <p>Live from PyPI — updated in real time.</p>
+    </div>
+    <div class="dl-grid">
+      <div class="dl-card">
+        <span class="dl-val skeleton" id="dl-day">—</span>
+        <span class="dl-lbl">Today</span>
+      </div>
+      <div class="dl-card">
+        <span class="dl-val skeleton" id="dl-week">—</span>
+        <span class="dl-lbl">This week</span>
+      </div>
+      <div class="dl-card">
+        <span class="dl-val skeleton" id="dl-month">—</span>
+        <span class="dl-lbl">This month</span>
+      </div>
+      <div class="dl-card">
+        <span class="dl-val skeleton" id="dl-total">—</span>
+        <span class="dl-lbl">All time</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install" class="alt">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-tag">Install</span>
+      <h2>Up and running in seconds.</h2>
+      <p>Python 3.8+ required. Works everywhere Python runs.</p>
+    </div>
+    <div class="install-grid">
+      <div class="install-card">
+        <div class="install-head">
+          <span>Standard</span>
+          <span class="tag">pip</span>
+        </div>
+        <div class="install-body">
+          <code class="install-cmd">pip install guro</code>
+          <button class="copy" data-copy="pip install guro">Copy</button>
+        </div>
+      </div>
+      <div class="install-card">
+        <div class="install-head">
+          <span>Isolated</span>
+          <span class="tag">pipx</span>
+        </div>
+        <div class="install-body">
+          <code class="install-cmd">pipx install guro</code>
+          <button class="copy" data-copy="pipx install guro">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="support-card">
+      <div>
+        <h2>Support Guro</h2>
+        <p>Built and maintained solo. If Guro has saved you time or made your debugging sessions easier, consider buying a coffee.</p>
+        <a href="https://buymeacoffee.com/itzmedhanu" target="_blank">
+          <button class="btn btn-ghost">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            Buy me a coffee
           </button>
         </a>
-        <a href="https://github.com/dhanushk-offl/guro" target="_blank">
-          <button class="btn btn-ghost">View on GitHub ↗</button>
-        </a>
-        <a href="https://buymeacoffee.com/itzmedhanu" target="_blank">
-          <button class="btn btn-coffee">☕ Buy me a coffee</button>
-        </a>
       </div>
-
-      <!-- live stats -->
-      <div class="hero-stats">
-        <div class="stat-item">
-          <span class="stat-val" id="stat-stars"><span class="skeleton sm"></span></span>
-          <span class="stat-label">GitHub Stars</span>
+      <div class="support-stats">
+        <div class="sup-item">
+          <span class="sup-val skeleton" id="ss-stars">—</span>
+          <span class="sup-lbl">Stars</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-val" id="stat-forks"><span class="skeleton sm"></span></span>
-          <span class="stat-label">Forks</span>
+        <div class="sup-item">
+          <span class="sup-val skeleton" id="ss-downloads">—</span>
+          <span class="sup-lbl">Downloads / mo</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-val amber" id="stat-version"><span class="skeleton sm"></span></span>
-          <span class="stat-label">Latest Version</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-val amber" id="stat-downloads"><span class="skeleton sm"></span></span>
-          <span class="stat-label">Downloads/mo</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- right terminal -->
-    <div class="terminal" role="img" aria-label="Guro terminal demo">
-      <div class="terminal-bar">
-        <span class="dot r"></span>
-        <span class="dot y"></span>
-        <span class="dot g"></span>
-        <span class="terminal-title">guro — terminal</span>
-      </div>
-      <div class="terminal-body">
-        <div><span class="t-prompt">$</span> <span class="t-cmd">pip install guro</span></div>
-        <div class="t-out">Collecting guro...</div>
-        <div class="t-out ok">Successfully installed guro ✓</div>
-        <br>
-        <div><span class="t-prompt">$</span> <span class="t-cmd">guro monitor</span></div>
-        <div class="t-out hi">▶ Initializing performance dashboard...</div>
-        <div class="t-out">CPU   ████████████░░░  78%  &nbsp; 3.4 GHz</div>
-        <div class="t-out">MEM   ██████░░░░░░░░░  42%  &nbsp; 6.7 GB / 16 GB</div>
-        <div class="t-out ok">Cores [0-7]: ▃▇▅▆▂▇▄▅</div>
-        <br>
-        <div><span class="t-prompt">$</span> <span class="t-cmd">guro heatmap</span></div>
-        <div class="t-out hi">▶ Scanning thermal sensors...</div>
-        <div class="t-out">CPU  Package  <span style="color:#ff4d6a">72°C</span>  ▲</div>
-        <div class="t-out">GPU  Core     <span style="color:#ffb340">58°C</span>  ◆</div>
-        <div class="t-out ok">SSD  NVMe    <span style="color:#00e57a">38°C</span>  ●</div>
-        <br>
-        <div><span class="t-prompt">$</span> <span class="t-cmd">guro network --speed</span></div>
-        <div class="t-out hi">▶ eth0 ↑ 1.2 MB/s  ↓ 3.4 MB/s</div>
-        <div class="t-out">wlan0 ↑ 0.1 MB/s  ↓ 0.2 MB/s</div>
-        <br>
-        <div><span class="t-prompt">$</span> <span class="t-cursor"></span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ FEATURES ══ -->
-<section class="features" id="features">
-  <div class="container">
-    <p class="section-label fade-up">/ capabilities</p>
-    <h2 class="section-title fade-up">Built for the<br>command line.</h2>
-    <p class="section-desc fade-up">
-      Cross-platform. <span class="green">Linux</span>, <span class="amber">macOS</span>, and Windows.
-      Desktop-class diagnostics inside your terminal — no GUI required.
-    </p>
-
-    <div class="features-grid" style="margin-top:3.5rem">
-      <div class="feat-card fade-up">
-        <span class="feat-icon">📊</span>
-        <div class="feat-name">Performance Telemetry</div>
-        <p class="feat-desc">
-          High-frequency ASCII-based historic trending. Real-time CPU core utilization,
-          memory envelopes, and active process telemetry in a rich TUI dashboard.
-        </p>
-      </div>
-      <div class="feat-card fade-up">
-        <span class="feat-icon">🌡️</span>
-        <div class="feat-name">Thermal Intelligence</div>
-        <p class="feat-desc">
-          Regex-free data acquisition from <code style="color:var(--amber);font-family:var(--mono);font-size:0.72rem">lm-sensors</code> and WMI.
-          Spatial temperature mapping across integrated hardware with synchronized trend analysis.
-        </p>
-      </div>
-      <div class="feat-card fade-up">
-        <span class="feat-icon">⚡</span>
-        <div class="feat-name">Hardware Benchmarking</div>
-        <p class="feat-desc">
-          Safety-first high-load stability testing with thermal threshold awareness.
-          Full support for NVIDIA, AMD, and integrated GPU solutions.
-        </p>
-      </div>
-      <div class="feat-card fade-up">
-        <span class="feat-icon">🖥️</span>
-        <div class="feat-name">GPU Diagnostics</div>
-        <p class="feat-desc">
-          Comprehensive GPU status reporting with memory usage, temperature, utilization,
-          and driver version across all detected graphics hardware.
-        </p>
-      </div>
-      <div class="feat-card fade-up">
-        <span class="feat-icon">🌐</span>
-        <div class="feat-name">Network Intelligence</div>
-        <p class="feat-desc">
-          Real-time bandwidth monitoring with per-interface upload/download sparklines,
-          TCP state distribution, and process-level connection tracking.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ COMMANDS ══ -->
-<section id="commands">
-  <div class="container">
-    <p class="section-label fade-up">/ commands</p>
-    <h2 class="section-title fade-up">One CLI,<br>everything you need.</h2>
-    <p class="section-desc fade-up mono">
-      Access all capabilities through a unified interface. No flags to memorize — just run.
-    </p>
-
-    <div class="commands-grid" style="margin-top:3rem">
-      <div class="cmd-row fade-up">
-        <span class="cmd-badge">guro monitor</span>
-        <div class="cmd-info">
-          <div class="cmd-name">Performance Dashboard</div>
-          <div class="cmd-desc">Interactive real-time system monitoring with CPU, memory, and process views.</div>
-        </div>
-      </div>
-      <div class="cmd-row fade-up">
-        <span class="cmd-badge">guro heatmap</span>
-        <div class="cmd-info">
-          <div class="cmd-name">Thermal Heatmap</div>
-          <div class="cmd-desc">Spatial hardware temperature mapping with historical trend analysis.</div>
-        </div>
-      </div>
-      <div class="cmd-row fade-up">
-        <span class="cmd-badge">guro gpu</span>
-        <div class="cmd-info">
-          <div class="cmd-name">GPU Diagnostics</div>
-          <div class="cmd-desc">Full diagnostic status report for all detected graphics processing units.</div>
-        </div>
-      </div>
-      <div class="cmd-row fade-up">
-        <span class="cmd-badge">guro benchmark</span>
-        <div class="cmd-info">
-          <div class="cmd-name">System Benchmark</div>
-          <div class="cmd-desc">High-load stability and speed testing with thermal safety monitoring.</div>
-        </div>
-      </div>
-      <div class="cmd-row fade-up">
-        <span class="cmd-badge">guro network</span>
-        <div class="cmd-info">
-          <div class="cmd-name">Network Dashboard</div>
-          <div class="cmd-desc">Real-time bandwidth, adapter specs, TCP states, and active connections — <code>--speed</code>, <code>--interfaces</code>, <code>--connections</code> flags available.</div>
+        <div class="sup-item">
+          <span class="sup-val skeleton" id="ss-total">—</span>
+          <span class="sup-lbl">Total</span>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══ INSTALL ══ -->
-<section class="install" id="install">
-  <div class="container">
-    <p class="section-label fade-up">/ installation</p>
-    <h2 class="section-title fade-up">Up and running<br>in seconds.</h2>
-    <p class="section-desc fade-up">Two ways to install. Pick your preference.</p>
-
-    <div class="install-methods">
-      <div class="install-card fade-up">
-        <div class="install-card-header">
-          <span class="install-card-label">Standard</span>
-          <span class="install-tag">pip</span>
-        </div>
-        <div class="install-card-body">
-          <div class="install-cmd">
-            <span class="prefix">$ </span>pip install guro
-          </div>
-          <button class="copy-btn" data-copy="pip install guro">copy</button>
-        </div>
-      </div>
-      <div class="install-card fade-up">
-        <div class="install-card-header">
-          <span class="install-card-label">Isolated (Recommended)</span>
-          <span class="install-tag">pipx</span>
-        </div>
-        <div class="install-card-body">
-          <div class="install-cmd">
-            <span class="prefix">$ </span>pipx install guro
-          </div>
-          <button class="copy-btn" data-copy="pipx install guro">copy</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Downloads stats -->
-    <div class="downloads-wrap fade-up" style="margin-top:3rem">
-      <div class="downloads-header">
-        <span>PyPI Download Statistics</span>
-        <span class="dl-live-badge">
-          live from pypistats.org
-          <span class="fetch-status loading" id="dl-status">fetching…</span>
-        </span>
-      </div>
-      <div class="download-stats-grid">
-        <div class="dl-stat">
-          <span class="dl-stat-val amber" id="dl-day"><span class="skeleton lg"></span></span>
-          <span class="dl-stat-lbl">Today</span>
-        </div>
-        <div class="dl-stat">
-          <span class="dl-stat-val amber" id="dl-week"><span class="skeleton lg"></span></span>
-          <span class="dl-stat-lbl">This Week</span>
-        </div>
-        <div class="dl-stat">
-          <span class="dl-stat-val amber" id="dl-month"><span class="skeleton lg"></span></span>
-          <span class="dl-stat-lbl">This Month</span>
-        </div>
-        <div class="dl-stat">
-          <span class="dl-stat-val amber" id="dl-year"><span class="skeleton lg"></span></span>
-          <span class="dl-stat-lbl">This Year (2026)</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ STAR HISTORY ══ -->
-<section id="stars">
-  <div class="container">
-    <p class="section-label fade-up">/ growth</p>
-    <h2 class="section-title fade-up">Star History</h2>
-    <p class="section-desc fade-up">Watch Guro grow — community momentum, one star at a time.</p>
-    <div class="star-history-wrap fade-up" style="margin-top:2rem">
-      <a href="https://star-history.com/#dhanushk-offl/guro&Date" target="_blank">
-        <img
-          src="https://api.star-history.com/svg?repos=dhanushk-offl/guro&type=Date"
-          alt="Guro GitHub Star History Chart"
-          loading="lazy"
-        />
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ══ CONTRIBUTING ══ -->
-<section class="contributing" id="contributing">
-  <div class="container">
-    <p class="section-label fade-up">/ contributing</p>
-    <h2 class="section-title fade-up">Help build<br>the future of Guro.</h2>
-    <p class="section-desc fade-up">
-      Guro follows professional development standards. Here's everything you need to get involved.
-    </p>
-
-    <div class="contrib-grid">
-      <div class="contrib-card fade-up">
-        <span class="contrib-num">01 — SETUP</span>
-        <div class="contrib-title">Development Environment</div>
-        <div class="contrib-body">
-          Clone the repo and create an isolated virtual environment before making changes.
-          <br><br>
-          <code>git clone https://github.com/dhanushk-offl/guro.git</code><br>
-          <code>python -m venv venv &amp;&amp; source venv/bin/activate</code><br>
-          <code>pip install -e ".[test]"</code>
-        </div>
-      </div>
-      <div class="contrib-card fade-up">
-        <span class="contrib-num">02 — STANDARDS</span>
-        <div class="contrib-title">Architectural Guidelines</div>
-        <div class="contrib-body">
-          Keep core logic (monitoring, benchmarking) decoupled from the CLI interface.
-          Subprocess calls must handle exceptions gracefully and prefer regex-free parsing.
-          TUI updates should use <code>rich.live</code> to minimize flickering.
-        </div>
-      </div>
-      <div class="contrib-card fade-up">
-        <span class="contrib-num">03 — TESTING</span>
-        <div class="contrib-title">Testing Standards</div>
-        <div class="contrib-body">
-          All PRs must include relevant unit or integration tests. Use <code>unittest.mock</code>
-          to simulate hardware environments for CI/CD compatibility.
-          <br><br>
-          <code>python -m pytest tests/</code>
-        </div>
-      </div>
-      <div class="contrib-card fade-up">
-        <span class="contrib-num">04 — PROCESS</span>
-        <div class="contrib-title">Pull Request Process</div>
-        <div class="contrib-body">
-          Create a feature branch from <code>main</code>. Use imperative commit messages.
-          Ensure PEP 8 compliance and all tests pass before opening a PR.
-          Update docs if you modify the public API or behavior.
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:2rem; text-align:center">
-      <a href="https://github.com/dhanushk-offl/guro/blob/master/CONTRIBUTING.md" target="_blank">
-        <button class="btn btn-ghost">Read Full CONTRIBUTING.md ↗</button>
-      </a>
-      &nbsp;&nbsp;
-      <a href="https://github.com/dhanushk-offl/guro/issues" target="_blank">
-        <button class="btn btn-ghost">Browse Issues ↗</button>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ══ SUPPORT ══ -->
-<section class="support" id="support">
-  <div class="support-box fade-up">
-    <span class="support-icon">☕</span>
-    <h2 class="support-title">Buy Dhanush a coffee</h2>
-    <p class="support-desc">
-      Guro is built and maintained solo, with ❤️ from Dhanush Kandhan.
-      If it's saved you time, made your debugging sessions easier, or just lives in your
-      muscle memory — consider buying a coffee to keep the project alive.
-    </p>
-    <a href="https://buymeacoffee.com/itzmedhanu" target="_blank">
-      <button class="btn btn-coffee" style="font-size:0.85rem; padding:14px 32px;">
-        ☕ &nbsp;buymeacoffee.com/itzmedhanu
-      </button>
-    </a>
-  </div>
-</section>
-
-<!-- ══ FOOTER ══ -->
 <footer>
-  <div class="footer-left">
-    Built with ❤️ by <span class="hl">Dhanush Kandhan</span> · MIT License · <span class="hl">guro</span>
+  <span>Built by <a href="https://github.com/dhanushk-offl">Dhanush Kandhan</a> &middot; MIT License</span>
+  <div class="footer-links">
+    <a href="docs.html">Docs</a>
+    <a href="faq.html">FAQ</a>
+    <a href="https://github.com/dhanushk-offl/guro">GitHub</a>
+    <a href="https://pypi.org/project/guro/">PyPI</a>
   </div>
-  <ul class="footer-links">
-    <li><a href="https://guro.pages.dev/" target="_blank">Website</a></li>
-    <li><a href="https://github.com/dhanushk-offl/guro" target="_blank">GitHub</a></li>
-    <li><a href="https://pypi.org/project/guro/" target="_blank">PyPI</a></li>
-    <li><a href="https://github.com/dhanushk-offl/guro/blob/master/CONTRIBUTING.md" target="_blank">Contribute</a></li>
-    <li><a href="https://github.com/dhanushk-offl/guro/blob/master/LICENSE" target="_blank">License</a></li>
-    <li><a href="https://buymeacoffee.com/itzmedhanu" target="_blank">Support</a></li>
-  </ul>
 </footer>
 
-<!-- ══ SCRIPTS ══ -->
 <script>
-/* ─── Utility ─── */
 function fmt(n) {
   if (n === null || n === undefined || isNaN(n)) return '—';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
   return String(n);
 }
+function setEl(id, val) { const el = document.getElementById(id); if (el) { el.textContent = val; el.classList.remove('skeleton'); } }
 
-function setEl(id, html, isError = false) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.innerHTML = html;
-  if (isError) el.classList.add('err');
-  else el.classList.remove('err');
+async function loadStats() {
+  const load = async (url, opts) => { try { const r = await fetch(url, opts); return r.ok ? r : null; } catch { return null; } };
+
+  const ghRes = await load('https://api.github.com/repos/dhanushk-offl/guro', { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+  if (ghRes) { try { const gh = await ghRes.json(); const s = fmt(gh.stargazers_count); setEl('stat-stars', s); setEl('ss-stars', s); } catch {} }
+
+  const pypiRes = await load('https://pypi.org/pypi/guro/json');
+  if (pypiRes) { try { const p = await pypiRes.json(); const v = 'v' + p.info.version; setEl('stat-version', v); setEl('nav-version', v); } catch {} }
+
+  const oRes = await load('https://pypistats.org/api/packages/guro/overall?mirrors=false');
+  if (oRes) { try {
+    const o = await oRes.json();
+    if (Array.isArray(o.data)) {
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const weekAgo = new Date(now - 7*86400000).toISOString().slice(0, 10);
+      const monthAgo = new Date(now - 30*86400000).toISOString().slice(0, 10);
+      let dayTotal = 0, weekTotal = 0, monthTotal = 0, allTotal = 0;
+      o.data.forEach(r => {
+        const d = r.downloads || 0;
+        allTotal += d;
+        if (r.date >= today) dayTotal += d;
+        if (r.date >= weekAgo) weekTotal += d;
+        if (r.date >= monthAgo) monthTotal += d;
+      });
+      setEl('dl-day', fmt(dayTotal));
+      setEl('dl-week', fmt(weekTotal));
+      setEl('dl-month', fmt(monthTotal));
+      setEl('dl-total', fmt(allTotal));
+      setEl('stat-monthly', fmt(monthTotal) + '/mo');
+      setEl('ss-downloads', fmt(monthTotal) + '/mo');
+      setEl('stat-total', fmt(allTotal));
+      setEl('ss-total', fmt(allTotal));
+    }
+  } catch {} }
 }
 
-function setStatus(id, state, label) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.className = `fetch-status ${state}`;
-  el.textContent = label;
-}
+document.querySelectorAll('.copy').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); } catch {}
+  });
+});
 
-/* ─── GitHub API ─── */
-async function loadGitHub() {
-  try {
-    const res = await fetch('https://api.github.com/repos/dhanushk-offl/guro', {
-      headers: { 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!res.ok) throw new Error(`GitHub ${res.status}`);
-    const d = await res.json();
-    setEl('stat-stars', fmt(d.stargazers_count));
-    setEl('stat-forks',  fmt(d.forks_count));
-  } catch (e) {
-    setEl('stat-stars', '14', true);
-    setEl('stat-forks',  '1',  true);
-    console.warn('GitHub API:', e.message);
-  }
-}
+loadStats();
 
-/* ─── PyPI version ─── */
-async function loadPyPI() {
+async function loadVersion() {
   try {
     const res = await fetch('https://pypi.org/pypi/guro/json');
-    if (!res.ok) throw new Error(`PyPI ${res.status}`);
-    const d = await res.json();
-    setEl('stat-version', 'v' + d.info.version);
-  } catch (e) {
-    setEl('stat-version', 'v0.2.x', true);
-    console.warn('PyPI API:', e.message);
-  }
+    if (res.ok) { const p = await res.json(); setEl('nav-version', 'v' + p.info.version); }
+  } catch {}
 }
-
-/* ─── PyPI Downloads — recent (day / week / month) ─── */
-async function loadRecentDownloads() {
-  setStatus('dl-status', 'loading', 'fetching…');
-  try {
-    const res = await fetch(
-      'https://pypistats.org/api/packages/guro/recent?period=day',
-      { headers: { 'Accept': 'application/json' } }
-    );
-    if (!res.ok) throw new Error(`pypistats recent ${res.status}`);
-    const json = await res.json();
-    /* pypistats returns { data: { last_day, last_week, last_month }, ... } */
-    const d = json.data;
-    setEl('dl-day',   fmt(d.last_day));
-    setEl('dl-week',  fmt(d.last_week));
-    setEl('dl-month', fmt(d.last_month));
-    setEl('stat-downloads', fmt(d.last_month) + '/mo');
-    return true;
-  } catch (e) {
-    console.warn('pypistats recent:', e.message);
-    return false;
-  }
-}
-
-/* ─── PyPI Downloads — current year via overall endpoint ─── */
-async function loadYearDownloads() {
-  const YEAR = new Date().getFullYear(); // 2026
-  try {
-    const res = await fetch(
-      `https://pypistats.org/api/packages/guro/overall?mirrors=false`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    if (!res.ok) throw new Error(`pypistats overall ${res.status}`);
-    const json = await res.json();
-    /* data is array of { category, date, downloads } */
-    const rows = Array.isArray(json.data) ? json.data : [];
-    const yearTotal = rows
-      .filter(r => r.date && r.date.startsWith(String(YEAR)))
-      .reduce((sum, r) => sum + (r.downloads || 0), 0);
-    if (yearTotal > 0) {
-      setEl('dl-year', fmt(yearTotal));
-    } else {
-      /* fallback: sum everything as total lifetime */
-      const total = rows.reduce((sum, r) => sum + (r.downloads || 0), 0);
-      setEl('dl-year', total > 0 ? fmt(total) + '*' : '—');
-    }
-    return true;
-  } catch (e) {
-    console.warn('pypistats overall:', e.message);
-    return false;
-  }
-}
-
-/* ─── Orchestrate download fetches ─── */
-async function loadDownloads() {
-  const [recentOk, yearOk] = await Promise.all([
-    loadRecentDownloads(),
-    loadYearDownloads()
-  ]);
-
-  if (recentOk && yearOk) {
-    setStatus('dl-status', 'ok', 'live data');
-  } else if (recentOk || yearOk) {
-    setStatus('dl-status', 'ok', 'partial data');
-    /* fill any still-skeleton cells */
-    ['dl-day','dl-week','dl-month','dl-year','stat-downloads'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.querySelector('.skeleton')) setEl(id, '—', true);
-    });
-  } else {
-    setStatus('dl-status', 'err', 'unavailable');
-    ['dl-day','dl-week','dl-month','dl-year','stat-downloads'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.querySelector('.skeleton')) setEl(id, '—', true);
-    });
-  }
-}
-
-/* ─── Copy buttons ─── */
-document.querySelectorAll('.copy-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const text = btn.dataset.copy;
-    try {
-      await navigator.clipboard.writeText(text);
-      btn.textContent = 'copied!';
-      btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
-    } catch {}
-  });
-});
-
-/* ─── Scroll animations ─── */
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      const siblings = [...e.target.parentElement.querySelectorAll('.fade-up:not(.visible)')];
-      const idx = siblings.indexOf(e.target);
-      setTimeout(() => e.target.classList.add('visible'), idx * 80);
-      observer.unobserve(e.target);
-    }
-  });
-}, { threshold: 0.12 });
-
-document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
-
-/* ─── Mobile nav ─── */
-const hamburger = document.getElementById('hamburger');
-const navLinks  = document.getElementById('nav-links');
-
-hamburger.addEventListener('click', () => {
-  const open = navLinks.classList.toggle('open');
-  hamburger.classList.toggle('active', open);
-  document.body.style.overflow = open ? 'hidden' : '';
-});
-
-function closeMenu() {
-  navLinks.classList.remove('open');
-  hamburger.classList.remove('active');
-  document.body.style.overflow = '';
-}
-
-/* close menu on outside click */
-document.addEventListener('click', e => {
-  if (!e.target.closest('nav')) closeMenu();
-});
-
-/* ─── Boot ─── */
-loadGitHub();
-loadPyPI();
-loadDownloads();
+loadVersion();
 </script>
+<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="itzmedhanu" data-description="Support me on Buy me a coffee!" data-message="" data-color="#40DCA5" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
 
 </body>
 </html>
