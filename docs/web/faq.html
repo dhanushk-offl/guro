@@ -3,9 +3,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FAQ — Guro</title>
-  <meta name="description" content="Frequently asked questions about Guro." />
+  <title>Guro FAQ — Frequently Asked Questions About CLI System Monitoring</title>
+  <meta name="description" content="Frequently asked questions about Guro, the open-source terminal system monitor and htop alternative. Installation, GPU support, benchmarks, compatibility with Linux, macOS, and Windows, and troubleshooting." />
+  <meta name="keywords" content="guro faq, system monitoring faq, guro installation, guro gpu support, guro benchmark, guro linux, guro windows, guro macos, htop alternative faq" />
+  <link rel="canonical" href="https://guro.pages.dev/faq.html" />
   <link rel="stylesheet" href="style.css" />
+
+  <meta property="og:title" content="Guro FAQ — Frequently Asked Questions About CLI System Monitoring" />
+  <meta property="og:description" content="Frequently asked questions about Guro CLI system monitor. Installation, GPU support, benchmarks, platform compatibility, and more." />
+  <meta property="og:url" content="https://guro.pages.dev/faq.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Guro" />
+  <meta property="og:image" content="https://guro.pages.dev/og-image.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Guro FAQ — Frequently Asked Questions About CLI System Monitoring" />
+  <meta name="twitter:description" content="Frequently asked questions about Guro CLI system monitor. Installation, GPU support, benchmarks, platform compatibility, and more." />
+  <meta name="twitter:image" content="https://guro.pages.dev/og-image.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I install Guro?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The simplest way is via pip: pip install guro. For a cleaner global install on Linux/macOS, use pipx: pipx install guro. On Windows, use a virtual environment."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Guro need admin privileges?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Most features run as a normal user. The only exception is the first-time sensors-detect setup on Linux, which needs sudo — that's a one-time system configuration, not Guro itself."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What Python version does Guro require?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Python 3.8 or newer. Guro uses only standard modern Python — no legacy compatibility hacks."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use Guro inside Docker or a VM?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. CPU and memory monitoring work fully inside containers and VMs. Thermal sensors and GPU access depend on whether the host exposes those to the container. For bare-metal data, run Guro directly on the host."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I start monitoring my system with Guro?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Just run: guro monitor. This starts an interactive dashboard. Use --interval to control sampling rate and --duration to set a time limit. Press Ctrl+C to stop at any time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I export data to CSV?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Pass the --export flag with a filename: guro monitor --duration 120 --export session.csv. The CSV will contain timestamps alongside all sampled metrics for offline analysis."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What's the difference between mini and god benchmarks?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Mini is a quick sanity check — moderate load for a short duration, good for a fast performance snapshot. God is maximum sustained load — designed to stress-test thermal limits, power delivery, and CPU/GPU stability over a longer period."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can Guro monitor just CPU or just GPU?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "For benchmarks, yes — use --cpu-only or --gpu-only. For dedicated GPU diagnostics, use guro gpu which gives a full status report for all detected adapters."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I see all available Guro commands?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Run: guro list. This prints a formatted summary of every command and its options."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which operating systems does Guro support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Guro supports Linux, macOS, and Windows. All core features work on all three platforms. Thermal heatmaps are best on Linux via lm-sensors. Windows uses WMI for thermal data. macOS thermal readings are limited by OS restrictions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Thermal heatmap shows no sensors on Linux — how do I fix this?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Install and configure lm-sensors: sudo apt install lm-sensors and sudo sensors-detect. Run sensors after setup to verify your hardware is detected. Then try guro heatmap again."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Guro work on ARM devices like Raspberry Pi?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Anywhere Python 3.8+ runs, Guro runs. ARM-based systems (Raspberry Pi, Apple Silicon via native Python, Jetson Nano) are fully supported. Some thermal sensors may differ by device."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which GPU brands are supported by Guro?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "NVIDIA — Full support via nvidia-smi. AMD — Supported via system sensors and ROCm where available. Intel / Integrated — Basic diagnostics available."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Guro work with conda, Poetry, or other package managers?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Guro is a standard PyPI package and works with any Python environment manager: conda, Poetry, pipx, or pip in a virtual environment."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Guro free? What's the license?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "100% free and open source. Guro is released under the MIT License — use it commercially, fork it, embed it, no strings attached."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I report a bug or request a feature?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Open an issue on GitHub Issues. For feature ideas, use GitHub Discussions. Please include your OS, Python version, and the full error output when reporting bugs."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How can I contribute to Guro?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Read CONTRIBUTING.md for the full guide. In short: fork the repo, create a branch, make your changes, and open a pull request. You can also support the project by starring it on GitHub or buying Dhanush a coffee."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Guro send any data externally?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Guro is purely local. All data is read from your own hardware sensors and displayed in your terminal. Nothing is transmitted, stored in the cloud, or shared anywhere."
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
