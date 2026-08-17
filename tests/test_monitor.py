@@ -141,10 +141,14 @@ def test_ascii_graph_clamps_out_of_range_values():
     rendered = graph.render("Clamped")
     assert isinstance(rendered, str)
     assert len(rendered) > 0
-    # Every sample is bounded; render must not raise and must use only bar chars
-    bar_chars = set(' ▁▂▃▄▅▆▇█')
-    for line in rendered.splitlines()[1:]:
-        assert all(c in bar_chars for c in line)
+    # Values below 0 clamp to an empty column, values above 100 to a full one
+    assert rendered.splitlines() == [
+        "Clamped",
+        " █ █",
+        " █ █",
+        " █ █",
+        " █ █",
+    ]
 
 
 @patch('psutil.virtual_memory')

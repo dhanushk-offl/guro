@@ -212,20 +212,20 @@ class TestSafeSystemBenchmark:
         mock_memory_obj = Mock()
         mock_memory_obj.percent = 99.9   # system-wide would trip the threshold
         mock_memory_obj.total = 16000 * 1024 * 1024
-        mock_memory_obj.available = 1600 * 1024 * 1024  # 90% used system-wide
+        mock_memory_obj.available = 16 * 1024 * 1024  # 99.9% used system-wide
         mock_memory.return_value = mock_memory_obj
 
         fake_proc = Mock()
         fake_full = Mock()
-        fake_full.uss = 16 * 1024 * 1024
+        fake_full.uss = 1000 * 1024 * 1024
         fake_proc.memory_full_info.return_value = fake_full
         benchmark._proc = fake_proc
 
         external = benchmark._external_memory_percent()
 
-        # system used = total - available = 14400MB; minus own 16MB = 14384MB
-        # external % = 14384 / 16000 = 89.9%
-        assert external == pytest.approx(89.9, abs=0.01)
+        # system used = total - available = 15984MB; minus own 1000MB = 14984MB
+        # external % = 14984 / 16000 = 93.65% (below the 95% threshold)
+        assert external == pytest.approx(93.65, abs=0.01)
 
     @patch('psutil.virtual_memory')
     def test_benchmark_own_memory_never_trips_watchdog(self, mock_memory, benchmark):
@@ -233,12 +233,12 @@ class TestSafeSystemBenchmark:
         mock_memory_obj = Mock()
         mock_memory_obj.percent = 99.9   # system-wide would trip the threshold
         mock_memory_obj.total = 16000 * 1024 * 1024
-        mock_memory_obj.available = 1600 * 1024 * 1024
+        mock_memory_obj.available = 16 * 1024 * 1024
         mock_memory.return_value = mock_memory_obj
 
         fake_proc = Mock()
         fake_full = Mock()
-        fake_full.uss = 15 * 1024 * 1024
+        fake_full.uss = 1000 * 1024 * 1024
         fake_proc.memory_full_info.return_value = fake_full
         benchmark._proc = fake_proc
 
