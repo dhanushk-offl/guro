@@ -99,7 +99,13 @@ class GPUDetector:
                 if 'GPU' in line and 'Card' in line:
                     if current_gpu:
                         gpus.append(current_gpu)
-                    current_gpu = {'type': 'AMD'}
+                    current_gpu = {
+                        'type': 'AMD',
+                        'name': f"AMD GPU {len(gpus)}",
+                        'utilization': 0.0,
+                        'fan_speed': None,
+                        'power_draw': None,
+                    }
                 if 'GPU Memory Use' in line:
                     try:
                         used = float(line.split(':')[1].strip().split()[0]) * 1024**2
@@ -368,7 +374,7 @@ class SystemMonitor:
                         for i, (gpu, graph) in enumerate(zip(gpu_info['gpus'], gpu_graphs)):
                             util = gpu.get('utilization', 0) or 0
                             graph.add_point(util)
-                            gpu_plots.append(graph.render(f"GPU {i} ({gpu['name']}): {util:.1f}%"))
+                            gpu_plots.append(graph.render(f"GPU {i} ({gpu.get('name', 'Unknown')}): {util:.1f}%"))
 
                             gpu_details_table.add_row(
                                 f"GPU {i}", "Name",

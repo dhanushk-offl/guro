@@ -146,25 +146,53 @@ class TestSafeSystemBenchmark:
             assert table.title == "Benchmark Status"
             assert len(table.columns) >= 2
 
-    @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
-    def test_monitor_resources_safety_threshold(self, mock_memory, mock_cpu, benchmark):
-        """Test resource monitoring safety thresholds"""
-        mock_cpu.return_value = 99  # Above MAX_CPUSAFE (98)
+    def test_monitor_resources_safety_threshold(self, mock_memory, benchmark):
+        """Test resource monitoring stops after sustained high *external* CPU"""
         mock_memory_obj = Mock()
         mock_memory_obj.percent = 60
         mock_memory.return_value = mock_memory_obj
 
         benchmark._stop_event.clear()
-        benchmark.monitor_resources()
+        with patch.object(benchmark, '_external_cpu_percent', return_value=99.0):
+            benchmark.monitor_resources()
 
-        assert benchmark._stop_event.is_set()  # Should have stopped due to high CPU usage
+        assert benchmark._stop_event.is_set()  # Should have stopped due to sustained high CPU usage
+        assert benchmark.stop_reason != ''
+
+    @patch('psutil.virtual_memory')
+    def test_monitor_resources_ignores_own_load(self, mock_memory, benchmark):
+        """Test that the benchmark's own load never trips the watchdog."""
+        mock_memory_obj = Mock()
+        mock_memory_obj.percent = 50
+        mock_memory.return_value = mock_memory_obj
+
+        iterations = {'count': 0}
+
+        def low_external_cpu():
+            iterations['count'] += 1
+            if iterations['count'] >= 2:
+                benchmark._stop_event.set()  # end the loop from outside
+            return 50.0  # well below MAX_CPUSAFE
+
+        benchmark._stop_event.clear()
+        with patch.object(benchmark, '_external_cpu_percent', side_effect=low_external_cpu):
+            benchmark.monitor_resources()
+
+        # Watchdog never decided to stop on its own — no stop_reason recorded
+        assert benchmark.stop_reason == ''
 
     @patch('rich.live.Live')
     def test_mini_test(self, mock_live, benchmark):
         """Test mini benchmark execution"""
         from guro.core.benchmark import GPUtil as test_GPUtil
-        with patch.object(test_GPUtil, 'getGPUs', return_value=[]):
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[]), \
+             patch.object(benchmark, 'safe_cpu_test',
+                          return_value={'times': [], 'loads': [10.0]}), \
+             patch.object(benchmark, 'safe_memory_test',
+                          return_value={'times': [], 'usage': [50.0], 'bandwidth_mbps': []}), \
+             patch.object(benchmark, 'safe_gpu_test',
+                          return_value={'times': [], 'gpu_stats': []}):
             benchmark.mini_test()
             assert 'system_info' in benchmark.results
             assert benchmark.results['duration'] == 30
@@ -175,7 +203,13 @@ class TestSafeSystemBenchmark:
     def test_god_test(self, mock_live, benchmark):
         """Test god-level benchmark execution"""
         from guro.core.benchmark import GPUtil as test_GPUtil
-        with patch.object(test_GPUtil, 'getGPUs', return_value=[]):
+        with patch.object(test_GPUtil, 'getGPUs', return_value=[]), \
+             patch.object(benchmark, 'safe_cpu_test',
+                          return_value={'times': [], 'loads': [10.0]}), \
+             patch.object(benchmark, 'safe_memory_test',
+                          return_value={'times': [], 'usage': [50.0], 'bandwidth_mbps': []}), \
+             patch.object(benchmark, 'safe_gpu_test',
+                          return_value={'times': [], 'gpu_stats': []}):
             benchmark.god_test()
             assert 'system_info' in benchmark.results
             assert benchmark.results['duration'] == 60

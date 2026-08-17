@@ -179,6 +179,7 @@ class SystemHeatmap:
                 smart_path = Path(f'/dev/{device}')
                 if not smart_path.exists():
                     continue
+                temp_found = False
                 try:
                     smart_output = subprocess.check_output(
                         ['smartctl', '-A', str(smart_path)],
@@ -194,12 +195,14 @@ class SystemHeatmap:
                                     storage_temp = float(part)
                                     if 0 < storage_temp < 120:  # sanity check
                                         temps['Storage'] = max(temps['Storage'], storage_temp)
+                                        temp_found = True
                                         break
                                 except ValueError:
                                     continue
-                    break  # Found one device with temp data, that's enough
                 except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
                     continue
+                if temp_found:
+                    break  # Found one device with temp data, that's enough
         except Exception:
             logger.debug("smartctl not available or no block devices found")
 

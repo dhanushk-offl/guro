@@ -1,4 +1,5 @@
 import click
+import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -12,6 +13,11 @@ from ..core.heatmap import SystemHeatmap
 from ..core.network import NetworkMonitor
 
 console = Console()
+
+logging.basicConfig(
+    level=logging.WARNING,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s'
+)
 
 
 def print_banner():
@@ -56,8 +62,9 @@ def monitor(interval: float, duration: Optional[int], export: bool):
             )
     except KeyboardInterrupt:
         console.print("\n[yellow]Monitoring stopped by user[/yellow]")
-    except Exception:
-        console.print("\n[red]Error during monitoring. Check logs for details.[/red]")
+    except Exception as e:
+        logging.exception("Error during monitoring")
+        console.print(f"\n[red]Error during monitoring: {e}[/red]")
 
 
 @cli.command()
@@ -86,9 +93,10 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Benchmark stopped by user[/yellow]")
-    except Exception:
+    except Exception as e:
+        logging.exception("Error during benchmark")
         console.print(Panel(
-            "[red]Error during benchmark. Check logs for details.[/red]",
+            f"[red]Error during benchmark: {e}[/red]",
             title="⚠️ Benchmark Error",
             border_style="red"
         ))
@@ -151,8 +159,9 @@ def heatmap(interval: float, duration: int):
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Heatmap visualization stopped by user[/yellow]")
-    except Exception:
-        console.print("[red]Error during heatmap visualization. Check logs for details.[/red]")
+    except Exception as e:
+        logging.exception("Error during heatmap visualization")
+        console.print(f"[red]Error during heatmap visualization: {e}[/red]")
 
 
 @cli.command()
@@ -194,8 +203,9 @@ def network(interfaces: bool, speed: bool, show_connections: bool,
             )
     except KeyboardInterrupt:
         console.print("\n[yellow]Network monitoring stopped by user[/yellow]")
-    except Exception:
-        console.print("\n[red]Error during network monitoring. Check logs for details.[/red]")
+    except Exception as e:
+        logging.exception("Error during network monitoring")
+        console.print(f"\n[red]Error during network monitoring: {e}[/red]")
 
 
 @cli.command(name='list')
