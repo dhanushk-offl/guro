@@ -29,7 +29,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run OpenSSF Scorecard analysis
+      - name: Run OpenSSF Scorecard analysis (attempt 1)
+        id: scorecard_analysis_attempt_1
+        continue-on-error: true
+        uses: ossf/scorecard-action@v2.3.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Run OpenSSF Scorecard analysis (attempt 2)
+        if: steps.scorecard_analysis_attempt_1.outcome == 'failure'
         uses: ossf/scorecard-action@v2.3.1
         with:
           results_file: results.sarif
