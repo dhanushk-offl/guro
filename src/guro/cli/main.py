@@ -50,16 +50,16 @@ def cli():
 def monitor(interval: float, duration: Optional[int], export: bool):
     """📊 Monitor system resources and performance in real-time"""
     try:
-        mon = SystemMonitor()
+        with console.status("[bold green]Initializing system monitor..."):
+            mon = SystemMonitor()
         if export:
             click.echo("📝 Monitoring data will be exported to a timestamped CSV file")
 
-        with console.status("[bold green]Initializing system monitor..."):
-            mon.run_performance_test(
-                interval=interval,
-                duration=duration,
-                export_data=export
-            )
+        mon.run_performance_test(
+            interval=interval,
+            duration=duration,
+            export_data=export
+        )
     except KeyboardInterrupt:
         console.print("\n[yellow]Monitoring stopped by user[/yellow]")
     except Exception as e:
@@ -76,7 +76,8 @@ def monitor(interval: float, duration: Optional[int], export: bool):
 def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
     """🔥 Run system benchmarks"""
     try:
-        bench = SafeSystemBenchmark()
+        with console.status("[bold green]Preparing benchmark..."):
+            bench = SafeSystemBenchmark()
 
         if not test_type:
             test_type = Prompt.ask(
@@ -85,11 +86,10 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool):
                 default="mini"
             )
 
-        with console.status("[bold green]Preparing benchmark..."):
-            if test_type == "mini":
-                bench.mini_test(gpu_only=gpu_only, cpu_only=cpu_only)
-            else:
-                bench.god_test(gpu_only=gpu_only, cpu_only=cpu_only)
+        if test_type == "mini":
+            bench.mini_test(gpu_only=gpu_only, cpu_only=cpu_only)
+        else:
+            bench.god_test(gpu_only=gpu_only, cpu_only=cpu_only)
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Benchmark stopped by user[/yellow]")
@@ -147,13 +147,13 @@ def gpu():
 def heatmap(interval: float, duration: int):
     """🌡️ Display unified system temperature heatmap"""
     try:
-        hm = SystemHeatmap()
-
         with console.status("[bold green]Initializing system heatmap..."):
-            updates = hm.run(
-                interval=interval,
-                duration=duration
-            )
+            hm = SystemHeatmap()
+
+        updates = hm.run(
+            interval=interval,
+            duration=duration
+        )
 
         console.print(f"\n[green]Heatmap completed after {updates} updates[/green]")
 

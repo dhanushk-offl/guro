@@ -2,7 +2,14 @@ from collections import deque
 
 
 class ASCIIGraph:
-    def __init__(self, width=70, height=10):
+    """A clean multi-line block chart rendered inside a Rich Panel.
+
+    No internal border is drawn — the wrapping Rich Panel provides the frame.
+    Each sample is drawn as a vertical bar so the trend stays visible even for
+    small fluctuations. Values are expected in the 0-100 range.
+    """
+
+    def __init__(self, width=40, height=5):
         self.width = width
         self.height = height
         self.data = deque(maxlen=width)
@@ -15,23 +22,25 @@ class ASCIIGraph:
         if not self.data:
             return ""
 
-        # Normalize data (0-100 range for percentages/temps)
-        normalized = []
-        for val in self.data:
-            # Scale 0-100 to index 0-len(chars)-1
-            idx = int((val / 100.0) * (len(self.chars) - 1))
-            normalized.append(max(0, min(len(self.chars) - 1, idx)))
+        h = max(self.height, 1)
+        values = list(self.data)[-self.width:]
 
-        # Generate graph
+        # Build one column per sample; bottom-anchored bars with partial fill
+        columns = []
+        for val in values:
+            scaled = (val / 100.0) * (h * 8)
+            full = int(scaled // 8)
+            partial = int(scaled % 8)
+            col = [' '] * h
+            for row in range(h - full, h):
+                col[row] = '█'
+            if partial > 0 and h - full - 1 >= 0:
+                col[h - full - 1] = self.chars[partial]
+            columns.append(col)
+
         lines = []
-        lines.append("╔" + "═" * (self.width + 2) + "╗")
-        lines.append("║ " + title.center(self.width) + " ║")
-        lines.append("\u2502 " + "\u2500" * self.width + " \u2502")
-
-        graph_str = ""
-        for val in normalized:
-            graph_str += self.chars[val]
-        lines.append("║ " + graph_str.ljust(self.width) + " ║")
-
-        lines.append("╚" + "═" * (self.width + 2) + "╝")
-        return "\n".join(lines)
+        if title:
+            lines.append(title)
+        for row in range(h):
+            lines.append(''.join(col[row] for col in columns))
+        return '\n'.join(lines)

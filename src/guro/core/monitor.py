@@ -215,8 +215,8 @@ class GPUDetector:
 class SystemMonitor:
     def __init__(self):
         self.console = Console()
-        self.cpu_graph = ASCIIGraph()
-        self.memory_graph = ASCIIGraph()
+        self.cpu_graph = ASCIIGraph(width=40, height=4)
+        self.memory_graph = ASCIIGraph(width=40, height=4)
         self.monitoring_data: List[Dict] = []
         # Cache GPU info — subprocess calls are expensive
         self._gpu_info = GPUDetector.get_all_gpus()
@@ -289,7 +289,7 @@ class SystemMonitor:
 
         # Initial GPU info (subprocess calls)
         gpu_info = self._refresh_gpu_info()
-        gpu_graphs = [ASCIIGraph(width=40, height=5) for _ in gpu_info.get('gpus', [])]
+        gpu_graphs = [ASCIIGraph(width=40, height=4) for _ in gpu_info.get('gpus', [])]
 
         # Setup Dashboard Layout
         layout = Layout()
@@ -303,8 +303,8 @@ class SystemMonitor:
             Layout(name="details", ratio=1)
         )
         layout["graphs"].split_column(
-            Layout(name="cpu_graph"),
-            Layout(name="mem_graph"),
+            Layout(name="cpu_graph", size=7),
+            Layout(name="mem_graph", size=7),
             Layout(name="gpu_graphs")
         )
 
@@ -359,7 +359,7 @@ class SystemMonitor:
                     gpu_info = self._refresh_gpu_info()
                     # Ensure enough graphs if GPU count changed
                     while len(gpu_graphs) < len(gpu_info.get('gpus', [])):
-                        gpu_graphs.append(ASCIIGraph(width=40, height=5))
+                        gpu_graphs.append(ASCIIGraph(width=40, height=4))
 
                     gpu_details_table = Table(
                         title="GPU & Device Information",
@@ -415,9 +415,9 @@ class SystemMonitor:
 
                     # Footer
                     layout["footer"].update(Panel(
-                        "[bold yellow]Press Ctrl+C to stop monitoring[/bold yellow] | "
-                        f"[cyan]Export: {'Enabled' if export_data else 'Disabled'}[/cyan]",
-                        border_style="blue"
+                        "[bold yellow]Press Ctrl+C to stop[/bold yellow]   "
+                        f"[cyan]Export: {'On' if export_data else 'Off'}[/cyan]",
+                        border_style="blue", box=box.SIMPLE
                     ))
 
                     time.sleep(interval)
