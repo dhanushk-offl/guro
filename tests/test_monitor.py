@@ -132,6 +132,21 @@ def test_ascii_graph_empty():
     assert rendered == ""
 
 
+def test_ascii_graph_clamps_out_of_range_values():
+    """Out-of-range samples are clamped so bars never index outside the column."""
+    graph = ASCIIGraph(width=20, height=4)
+    for value in [-50, 150, -999, 500]:
+        graph.add_point(value)
+
+    rendered = graph.render("Clamped")
+    assert isinstance(rendered, str)
+    assert len(rendered) > 0
+    # Every sample is bounded; render must not raise and must use only bar chars
+    bar_chars = set(' ▁▂▃▄▅▆▇█')
+    for line in rendered.splitlines()[1:]:
+        assert all(c in bar_chars for c in line)
+
+
 @patch('psutil.virtual_memory')
 def test_csv_export_uses_timestamp(mock_virtual_memory, monitor):
     """Test that CSV export creates a timestamped file"""

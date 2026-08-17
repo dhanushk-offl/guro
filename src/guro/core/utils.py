@@ -28,7 +28,8 @@ class ASCIIGraph:
         # Build one column per sample; bottom-anchored bars with partial fill
         columns = []
         for val in values:
-            scaled = (val / 100.0) * (h * 8)
+            bounded = min(max(float(val), 0.0), 100.0)
+            scaled = (bounded / 100.0) * (h * 8)
             full = int(scaled // 8)
             partial = int(scaled % 8)
             col = [' '] * h

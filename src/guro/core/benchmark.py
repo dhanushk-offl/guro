@@ -32,6 +32,14 @@ class SafeSystemBenchmark:
         self.RESOURCE_WARNING_SAMPLES = 3  # sustained readings before we act
         self.stop_reason: str = ''
         self.has_gpu = self._check_gpu()
+        # Reuse a single psutil.Process instance: cpu_percent(interval=None)
+        # compares against the previous call on the same object, so a fresh
+        # instance per sample would always report 0.0.
+        self._proc = psutil.Process()
+        try:
+            self._proc.cpu_percent(interval=None)  # prime the baseline
+        except psutil.Error:
+            self._proc = None
 
     @property
     def running(self) -> bool:
@@ -116,12 +124,29 @@ class SafeSystemBenchmark:
         """
         try:
             system_pct = psutil.cpu_percent(interval=0.5)
-            proc_pct = psutil.Process().cpu_percent(interval=None)
+            proc_pct = self._proc.cpu_percent(interval=None) if self._proc else 0.0
             cores = max(psutil.cpu_count() or 1, 1)
             own_pct = proc_pct / cores
             return max(0.0, system_pct - own_pct)
         except Exception:
             return psutil.cpu_percent(interval=0.5)
+
+    def _external_memory_percent(self) -> float:
+        """System-wide memory % excluding this benchmark process's own resident memory.
+
+        psutil.virtual_memory().percent is system-wide and counts this process's
+        resident set, so it can trip the watchdog on a healthy run. Derive the
+        external usage from total/available and subtract the benchmark's USS.
+        """
+        try:
+            vm = psutil.virtual_memory()
+            if self._proc is None:
+                return vm.percent
+            own_uss = self._proc.memory_full_info().uss or 0
+            used_external = max(0.0, vm.total - vm.available - own_uss)
+            return (used_external / vm.total * 100.0) if vm.total else 0.0
+        except Exception:
+            return psutil.virtual_memory().percent
 
     def monitor_resources(self):
         """Monitor system resources in real-time — graceful stop on sustained external danger.
@@ -132,7 +157,7 @@ class SafeSystemBenchmark:
         high_samples = 0
         while not self._stop_event.is_set():
             cpu_percent = self._external_cpu_percent()
-            memory_percent = psutil.virtual_memory().percent
+            memory_percent = self._external_memory_percent()
 
             if cpu_percent > self.MAX_CPUSAFE or memory_percent > self.MAX_MEMORY_USAGE:
                 high_samples += 1
