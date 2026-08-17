@@ -59,7 +59,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
@@ -87,6 +87,32 @@ jobs:
         exit 1
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      id: codeql_analyze
+      continue-on-error: true
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{matrix.language}}"
+
+    - name: Retry SARIF upload (attempt 1)
+      id: codeql_upload_retry_1
+      if: steps.codeql_analyze.outcome == 'failure' && hashFiles(format('results/{0}.sarif', matrix.language)) != ''
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: results/${{ matrix.language }}.sarif
+        category: "/language:${{matrix.language}}"
+
+    - name: Retry SARIF upload (attempt 2)
+      id: codeql_upload_retry_2
+      if: steps.codeql_upload_retry_1.outcome == 'failure'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: results/${{ matrix.language }}.sarif
+        category: "/language:${{matrix.language}}"
+
+    - name: Fail if CodeQL upload retries did not recover
+      if: steps.codeql_analyze.outcome == 'failure' && steps.codeql_upload_retry_1.outcome != 'success' && steps.codeql_upload_retry_2.outcome != 'success'
+      run: |
+        echo "CodeQL analysis failed and SARIF upload retries did not recover."
+        exit 1

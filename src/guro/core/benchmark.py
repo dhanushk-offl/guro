@@ -29,7 +29,17 @@ class SafeSystemBenchmark:
         # Safety thresholds — these are for *monitoring*, not for killing benchmarks
         self.MAX_CPUSAFE = 98        # 98% CPU is reasonable during a benchmark
         self.MAX_MEMORY_USAGE = 95    # 95% memory before we worry
+        self.RESOURCE_WARNING_SAMPLES = 3  # sustained readings before we act
+        self.stop_reason: str = ''
         self.has_gpu = self._check_gpu()
+        # Reuse a single psutil.Process instance: cpu_percent(interval=None)
+        # compares against the previous call on the same object, so a fresh
+        # instance per sample would always report 0.0.
+        self._proc = psutil.Process()
+        try:
+            self._proc.cpu_percent(interval=None)  # prime the baseline
+        except psutil.Error:
+            self._proc = None
 
     @property
     def running(self) -> bool:
@@ -104,15 +114,62 @@ class SafeSystemBenchmark:
 
         return result
 
-    def monitor_resources(self):
-        """Monitor system resources in real-time — graceful stop on unsafe levels"""
-        while not self._stop_event.is_set():
-            cpu_percent = psutil.cpu_percent(interval=0.5)
-            memory_percent = psutil.virtual_memory().percent
+    def _external_cpu_percent(self) -> float:
+        """System-wide CPU load excluding this benchmark process's own contribution.
 
-            # Only stop for truly dangerous levels, not during normal benchmark load
+        The benchmark workload legitimately pegs the CPU — that is the point of it.
+        The watchdog must not kill the run it launched, so we only measure load
+        produced by *other* processes. process.cpu_percent() reports % of a single
+        core, so normalize by core count before comparing against system-wide %.
+        """
+        try:
+            system_pct = psutil.cpu_percent(interval=0.5)
+            proc_pct = self._proc.cpu_percent(interval=None) if self._proc else 0.0
+            cores = max(psutil.cpu_count() or 1, 1)
+            own_pct = proc_pct / cores
+            return max(0.0, system_pct - own_pct)
+        except Exception:
+            return psutil.cpu_percent(interval=0.5)
+
+    def _external_memory_percent(self) -> float:
+        """System-wide memory % excluding this benchmark process's own resident memory.
+
+        psutil.virtual_memory().percent is system-wide and counts this process's
+        resident set, so it can trip the watchdog on a healthy run. Derive the
+        external usage from total/available and subtract the benchmark's USS.
+        """
+        try:
+            vm = psutil.virtual_memory()
+            if self._proc is None:
+                return vm.percent
+            own_uss = self._proc.memory_full_info().uss or 0
+            used_external = max(0.0, vm.total - vm.available - own_uss)
+            return (used_external / vm.total * 100.0) if vm.total else 0.0
+        except Exception:
+            return psutil.virtual_memory().percent
+
+    def monitor_resources(self):
+        """Monitor system resources in real-time — graceful stop on sustained external danger.
+
+        Only stops for *external* load (other processes) sustained over multiple
+        samples. The benchmark's own CPU and memory usage never trips the watchdog.
+        """
+        high_samples = 0
+        while not self._stop_event.is_set():
+            cpu_percent = self._external_cpu_percent()
+            memory_percent = self._external_memory_percent()
+
             if cpu_percent > self.MAX_CPUSAFE or memory_percent > self.MAX_MEMORY_USAGE:
+                high_samples += 1
+            else:
+                high_samples = 0
+
+            if high_samples >= self.RESOURCE_WARNING_SAMPLES:
                 self._stop_event.set()
+                self.stop_reason = (
+                    f"external CPU {cpu_percent:.1f}% or memory {memory_percent:.1f}% "
+                    "dangerously high over multiple samples"
+                )
                 self.console.print("[red]Warning: System resource usage dangerously high. Stopping benchmark.[/red]")
                 break
 
@@ -172,6 +229,7 @@ class SafeSystemBenchmark:
     def mini_test(self, gpu_only: bool = False, cpu_only: bool = False):
         """Run 30-second mini benchmark"""
         self._stop_event.clear()
+        self.stop_reason = ''
         duration = 30
 
         # Start resource monitoring as daemon
@@ -200,11 +258,14 @@ class SafeSystemBenchmark:
             self._stop_event.set()
             monitor_thread.join(timeout=2)
 
+        if self.stop_reason:
+            self.console.print(f"[red]Benchmark stopped early: {self.stop_reason}[/red]")
         self.display_results("Mini-Test")
 
     def god_test(self, gpu_only: bool = False, cpu_only: bool = False):
         """Running GOD-LEVEL comprehensive benchmark"""
         self._stop_event.clear()
+        self.stop_reason = ''
         duration = 60
 
         # Start resource monitoring as daemon
@@ -233,6 +294,8 @@ class SafeSystemBenchmark:
             self._stop_event.set()
             monitor_thread.join(timeout=2)
 
+        if self.stop_reason:
+            self.console.print(f"[red]Benchmark stopped early: {self.stop_reason}[/red]")
         self.display_results("God-Test")
 
     def generate_status_table(self) -> Table:
@@ -312,11 +375,13 @@ class SafeSystemBenchmark:
         if 'gpu' in self.results and 'error' not in self.results['gpu']:
             gpu_stats_list = self.results['gpu'].get('gpu_stats', [])
             if gpu_stats_list:
-                num_gpus = len(gpu_stats_list[0])
+                num_gpus = max(len(sample) for sample in gpu_stats_list)
                 for i in range(num_gpus):
-                    gpu_loads = [stats[i]['load'] for stats in gpu_stats_list]
-                    gpu_mems = [stats[i]['memory_usage'] for stats in gpu_stats_list]
+                    gpu_loads = [stats[i]['load'] for stats in gpu_stats_list if i < len(stats)]
+                    gpu_mems = [stats[i]['memory_usage'] for stats in gpu_stats_list if i < len(stats)]
 
+                    if not gpu_loads:
+                        continue
                     result_text += f"• GPU {i} Results:\n"
                     result_text += f"  - Average Load: {np.mean(gpu_loads):.2f}%\n"
                     result_text += f"  - Peak Load: {max(gpu_loads):.2f}%\n"
@@ -324,6 +389,9 @@ class SafeSystemBenchmark:
                     result_text += f"  - Peak Memory: {max(gpu_mems):.2f} MB\n"
 
         result_text += f"• Test Duration: {self.results.get('duration', 'N/A')} seconds\n"
+
+        if self.stop_reason:
+            result_text += f"• [red]Stopped early: {self.stop_reason}[/red]\n"
 
         self.console.print(Panel(
             result_text,

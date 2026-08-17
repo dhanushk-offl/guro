@@ -99,7 +99,13 @@ class GPUDetector:
                 if 'GPU' in line and 'Card' in line:
                     if current_gpu:
                         gpus.append(current_gpu)
-                    current_gpu = {'type': 'AMD'}
+                    current_gpu = {
+                        'type': 'AMD',
+                        'name': f"AMD GPU {len(gpus)}",
+                        'utilization': 0.0,
+                        'fan_speed': None,
+                        'power_draw': None,
+                    }
                 if 'GPU Memory Use' in line:
                     try:
                         used = float(line.split(':')[1].strip().split()[0]) * 1024**2
@@ -209,8 +215,8 @@ class GPUDetector:
 class SystemMonitor:
     def __init__(self):
         self.console = Console()
-        self.cpu_graph = ASCIIGraph()
-        self.memory_graph = ASCIIGraph()
+        self.cpu_graph = ASCIIGraph(width=40, height=4)
+        self.memory_graph = ASCIIGraph(width=40, height=4)
         self.monitoring_data: List[Dict] = []
         # Cache GPU info — subprocess calls are expensive
         self._gpu_info = GPUDetector.get_all_gpus()
@@ -283,7 +289,7 @@ class SystemMonitor:
 
         # Initial GPU info (subprocess calls)
         gpu_info = self._refresh_gpu_info()
-        gpu_graphs = [ASCIIGraph(width=40, height=5) for _ in gpu_info.get('gpus', [])]
+        gpu_graphs = [ASCIIGraph(width=40, height=4) for _ in gpu_info.get('gpus', [])]
 
         # Setup Dashboard Layout
         layout = Layout()
@@ -297,8 +303,8 @@ class SystemMonitor:
             Layout(name="details", ratio=1)
         )
         layout["graphs"].split_column(
-            Layout(name="cpu_graph"),
-            Layout(name="mem_graph"),
+            Layout(name="cpu_graph", size=7),
+            Layout(name="mem_graph", size=7),
             Layout(name="gpu_graphs")
         )
 
@@ -353,7 +359,7 @@ class SystemMonitor:
                     gpu_info = self._refresh_gpu_info()
                     # Ensure enough graphs if GPU count changed
                     while len(gpu_graphs) < len(gpu_info.get('gpus', [])):
-                        gpu_graphs.append(ASCIIGraph(width=40, height=5))
+                        gpu_graphs.append(ASCIIGraph(width=40, height=4))
 
                     gpu_details_table = Table(
                         title="GPU & Device Information",
@@ -368,7 +374,7 @@ class SystemMonitor:
                         for i, (gpu, graph) in enumerate(zip(gpu_info['gpus'], gpu_graphs)):
                             util = gpu.get('utilization', 0) or 0
                             graph.add_point(util)
-                            gpu_plots.append(graph.render(f"GPU {i} ({gpu['name']}): {util:.1f}%"))
+                            gpu_plots.append(graph.render(f"GPU {i} ({gpu.get('name', 'Unknown')}): {util:.1f}%"))
 
                             gpu_details_table.add_row(
                                 f"GPU {i}", "Name",
@@ -409,9 +415,9 @@ class SystemMonitor:
 
                     # Footer
                     layout["footer"].update(Panel(
-                        "[bold yellow]Press Ctrl+C to stop monitoring[/bold yellow] | "
-                        f"[cyan]Export: {'Enabled' if export_data else 'Disabled'}[/cyan]",
-                        border_style="blue"
+                        "[bold yellow]Press Ctrl+C to stop[/bold yellow]   "
+                        f"[cyan]Export: {'On' if export_data else 'Off'}[/cyan]",
+                        border_style="blue", box=box.SIMPLE
                     ))
 
                     time.sleep(interval)
