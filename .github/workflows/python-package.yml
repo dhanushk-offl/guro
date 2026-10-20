@@ -8,11 +8,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu-latest]
+        include:
+          - os: windows-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.12"
 
     steps:
     - uses: actions/checkout@v4
@@ -32,3 +38,14 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --tb=short -q
+    - name: Build distribution
+      run: |
+        pip install build
+        python -m build
+    - name: Install and smoke-test wheel
+      shell: bash
+      run: |
+        pip install --force-reinstall --no-deps dist/*.whl
+        cd "$RUNNER_TEMP"
+        guro --version
+        guro doctor --format json

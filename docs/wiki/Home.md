@@ -11,6 +11,13 @@ Welcome to the technical documentation for Guro. This wiki provides in-depth ana
 - [Network Monitoring Architecture](Architecture-Network.md)
 - [Platform Implementation Details](Platform-Support.md)
 - [Troubleshooting and Diagnostics](Troubleshooting.md)
+- [Collector Performance Measurements](../PERFORMANCE_REVIEW.md)
+
+## Diagnostics and structured output
+
+Start with `guro doctor` to see which sensors, tools, and permissions are available on the current system. For automation, use `--format json` or `--format jsonl` and optionally `--output PATH`. Monitoring exports stream each sample; temperature readings include their source, timestamp, and availability.
+
+See the repository [README](../../README.md#structured-output-and-exports) for command examples and the [release notes](../../RELEASE_NOTES.md) for compatibility changes and validation results.
 
 ## Project Links
 

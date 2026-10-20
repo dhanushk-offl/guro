@@ -39,40 +39,19 @@ class TestMultiGPUDetection:
 
 
 class TestBenchmarkMultiGPU:
-    """Tests for benchmark module with multiple GPUs"""
+    @patch('guro.core.benchmark.GPUDetector.get_all_gpus')
+    def test_benchmark_uses_shared_detector(self, detector):
+        detector.return_value = {'available': True, 'gpus': [
+            {'name': 'AMD GPU', 'memory_total': 8192 * 1024**2},
+            {'name': 'NVIDIA GPU', 'memory_total': 16384 * 1024**2},
+        ]}
+        bench = SafeSystemBenchmark()
+        assert bench.has_gpu == detector.return_value
+        assert len(bench.get_system_info()['gpus']) == 2
 
-    @patch('guro.core.benchmark.GPUtil')
-    @patch('guro.core.benchmark.HAS_GPU_STATS', True)
-    def test_benchmark_initialization_multi(self, mock_gputil):
-        """Test benchmark initialization detects multiple GPUs."""
-        gpu1 = MagicMock(name="GPU1")
-        gpu1.name = "NVIDIA RTX 4090"
-        gpu1.memoryTotal = 24576
-        gpu1.driver = "550.0"
-
-        gpu2 = MagicMock(name="GPU2")
-        gpu2.name = "NVIDIA RTX 3080"
-        gpu2.memoryTotal = 10240
-        gpu2.driver = "550.0"
-
-        mock_gputil.getGPUs.return_value = [gpu1, gpu2]
-
-        benchmark = SafeSystemBenchmark()
-        assert benchmark.has_gpu['available'] is True
-        assert len(benchmark.has_gpu['gpus']) == 2
-        assert benchmark.has_gpu['gpus'][0]['name'] == "NVIDIA RTX 4090"
-
-    @patch('guro.core.benchmark.GPUtil')
-    @patch('guro.core.benchmark.HAS_GPU_STATS', True)
-    def test_gpu_not_found_status_table(self, mock_gputil):
-        """Test status table when no GPU is found."""
-        mock_gputil.getGPUs.return_value = []
-        benchmark = SafeSystemBenchmark()
-        benchmark.has_gpu = {'available': False, 'gpus': []}
-
-        table = benchmark.generate_status_table()
-        # Check that the table renders without error when no GPU is available
-        assert table is not None
+    @patch('guro.core.benchmark.GPUDetector.get_all_gpus', return_value={'available': False, 'gpus': []})
+    def test_gpu_not_found_status_table(self, detector):
+        assert SafeSystemBenchmark().generate_status_table().title == 'Benchmark Status'
 
 
 class TestHeatmapMultiGPU:

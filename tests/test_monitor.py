@@ -73,6 +73,7 @@ def test_nvidia_gpu_detection(mock_check_output):
     gpus = GPUDetector.get_nvidia_info()
 
     assert isinstance(gpus, list)
+    assert len(gpus) == 1
     if gpus:
         assert 'name' in gpus[0]
         assert 'memory_total' in gpus[0]
@@ -89,6 +90,7 @@ def test_nvidia_gpu_na_values(mock_check_output):
     gpus = GPUDetector.get_nvidia_info()
 
     assert isinstance(gpus, list)
+    assert len(gpus) == 1
     if gpus:
         assert gpus[0]['fan_speed'] is None
         assert gpus[0]['power_draw'] is None
@@ -97,21 +99,14 @@ def test_nvidia_gpu_na_values(mock_check_output):
 @patch('subprocess.check_output')
 def test_amd_gpu_detection(mock_check_output):
     """Test AMD GPU detection"""
-    mock_output = """
-    GPU 0: Card Series
-    GPU Memory Use: 4096 MB
-    Total GPU Memory: 8192 MB
-    Temperature: 70 C
-    """
-    mock_check_output.return_value = mock_output.encode()
-
+    mock_check_output.return_value = '{"card0": {"Card Series": "AMD Radeon", "PCI Bus": "0000:03:00.0", "VRAM Total Memory (B)": "8589934592", "VRAM Total Used Memory (B)": "4294967296", "Temperature (Sensor edge) (C)": "70", "GPU use (%)": "25"}}'
     gpus = GPUDetector.get_amd_info()
-
-    assert isinstance(gpus, list)
-    if gpus:
-        assert 'memory_total' in gpus[0]
-        assert 'temperature' in gpus[0]
-        assert gpus[0]['type'] == 'AMD'
+    assert len(gpus) == 1
+    assert gpus[0]['name'] == 'AMD Radeon'
+    assert gpus[0]['memory_total'] == 8192 * 1024**2
+    assert gpus[0]['memory_free'] == 4096 * 1024**2
+    assert gpus[0]['temperature'] == 70
+    assert gpus[0]['utilization'] == 25
 
 
 def test_ascii_graph(ascii_graph):
@@ -205,3 +200,21 @@ def test_gpu_cache(monitor):
     # Immediately calling again should return the same cached info without subprocess calls
     info2 = monitor._refresh_gpu_info()
     assert info2 == info1
+
+
+def test_process_collection_does_not_sleep_or_scan_twice(monitor):
+    process = MagicMock()
+    process.info = {'pid': 42, 'name': 'worker', 'memory_percent': 1.5}
+    process.cpu_percent.return_value = 25
+    with patch('psutil.process_iter', return_value=[process]) as scan, patch('time.sleep') as sleep:
+        processes = monitor._get_processes()
+    scan.assert_called_once()
+    sleep.assert_not_called()
+    assert processes == [{'pid': 42, 'name': 'worker', 'cpu_percent': 25, 'memory_percent': 1.5}]
+
+
+def test_discovery_not_repeated_when_refreshing_metrics(monitor):
+    monitor._gpu_info_time = float('-inf')
+    with patch.object(GPUDetector, 'get_all_gpus', return_value={'available': False, 'gpus': []}) as detector:
+        monitor._refresh_gpu_info()
+    detector.assert_called_once_with(include_adapters=False)

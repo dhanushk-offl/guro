@@ -1,13 +1,11 @@
 import time
+import shutil
 import psutil
 import platform
 import logging
 import subprocess
-import os
 import numpy as np
-from typing import Dict, List, Optional
-from pathlib import Path
-from ctypes import Structure
+from typing import Dict, Optional
 
 from rich.live import Live
 from rich.console import Console
@@ -18,28 +16,19 @@ from rich.layout import Layout
 from rich import box
 
 from .utils import ASCIIGraph
+from .telemetry import Reading, Schedule
 
 logger = logging.getLogger(__name__)
 
 SUBPROCESS_TIMEOUT = 5  # seconds
 
-# Import platform-specific modules
-if platform.system() == "Windows":
-    from ctypes import windll, wintypes, POINTER
-
-    class SYSTEM_POWER_STATUS(Structure):
-        _fields_ = [
-            ('ACLineStatus', wintypes.BYTE),
-            ('BatteryFlag', wintypes.BYTE),
-            ('BatteryLifePercent', wintypes.BYTE),
-            ('SystemStatusFlag', wintypes.BYTE),
-            ('BatteryLifeTime', wintypes.DWORD),
-            ('BatteryFullLifeTime', wintypes.DWORD),
-        ]
-
 
 class SystemHeatmap:
-    def __init__(self):
+    def __init__(self, estimates: bool = False):
+        self.estimates = estimates
+        self.readings = {}
+        self._gpu_reading = None
+        self._gpu_checked_at = float('-inf')
         self.console = Console()
         self.history_size = 60
         self.system = platform.system()
@@ -66,14 +55,7 @@ class SystemHeatmap:
             import wmi  # type: ignore
             self.wmi_connection = wmi.WMI(namespace="root\\OpenHardwareMonitor")
         except Exception:
-            logger.debug("OpenHardwareMonitor WMI not available, using fallback temps")
-
-        try:
-            self.GetSystemPowerStatus = windll.kernel32.GetSystemPowerStatus
-            self.GetSystemPowerStatus.argtypes = [POINTER(SYSTEM_POWER_STATUS)]
-            self.GetSystemPowerStatus.restype = wintypes.BOOL
-        except Exception:
-            logger.debug("Windows power status API not available")
+            logger.debug("OpenHardwareMonitor WMI not available, marking sensors unavailable")
 
     def initialize_temp_maps(self):
         self.temp_maps: Dict[str, np.ndarray] = {
@@ -81,129 +63,56 @@ class SystemHeatmap:
             for component, dims in self.components.items()
         }
 
-    def get_windows_temps(self) -> Dict[str, float]:
-        temps = self.get_fallback_temps()
+    def _empty_temps(self):
+        return {component: None for component in self.components}
 
-        if self.wmi_connection:
+    @staticmethod
+    def _record(temps, component, value):
+        reading = Reading.temperature(value, 'sensor')
+        if reading.available:
+            previous = temps[component]
+            temps[component] = value if previous is None else max(previous, value)
+
+    def get_windows_temps(self):
+        temps = self._empty_temps()
+        if getattr(self, 'wmi_connection', None):
             try:
-                sensors = self.wmi_connection.Sensor()
-                gpu_temps: List[float] = []
-                for sensor in sensors:
-                    if sensor.SensorType == 'Temperature':
-                        value = float(sensor.Value)
-                        if 'CPU' in sensor.Name and temps['CPU'] < value:
-                            temps['CPU'] = value
-                        elif 'GPU' in sensor.Name:
-                            gpu_temps.append(value)
-                        elif 'Motherboard' in sensor.Name and temps['Motherboard'] < value:
-                            temps['Motherboard'] = value
-                        elif 'Drive' in sensor.Name and temps['Storage'] < value:
-                            temps['Storage'] = value
-                if gpu_temps:
-                    temps['GPU'] = max(gpu_temps)
+                for sensor in self.wmi_connection.Sensor():
+                    if sensor.SensorType != 'Temperature':
+                        continue
+                    name = sensor.Name.lower()
+                    component = next((c for c, keys in {
+                        'CPU': ('cpu',), 'GPU': ('gpu',),
+                        'Motherboard': ('motherboard',), 'Storage': ('drive',),
+                        'RAM': ('ram', 'dimm')
+                    }.items() if any(k in name for k in keys)), None)
+                    if component:
+                        try:
+                            self._record(temps, component, float(sensor.Value))
+                        except (TypeError, ValueError):
+                            continue
             except Exception:
-                logger.debug("Error reading WMI sensors, using fallback temps")
-
-        temps['RAM'] = self.get_ram_temp()
+                logger.exception('Unable to read WMI temperatures')
         return temps
 
-    def get_linux_temps(self) -> Dict[str, float]:
-        temps = self.get_fallback_temps()
-
-        # Read from sysfs thermal zones
+    def get_linux_temps(self):
+        temps = self._empty_temps()
         try:
-            thermal_zones = Path('/sys/class/thermal').glob('thermal_zone*')
-            for zone in thermal_zones:
-                try:
-                    with open(zone / 'type') as f:
-                        zone_type = f.read().strip()
-                    with open(zone / 'temp') as f:
-                        temp = float(f.read().strip()) / 1000.0
-
-                    if 'cpu' in zone_type.lower():
-                        temps['CPU'] = max(temps['CPU'], temp)
-                    elif 'gpu' in zone_type.lower():
-                        temps['GPU'] = max(temps['GPU'], temp)
-                except (OSError, ValueError):
-                    continue
-        except Exception:
-            logger.debug("Error reading sysfs thermal zones")
-
-        # Try lm-sensors
-        try:
-            sensors_output = subprocess.check_output(
-                ['sensors'],
-                stderr=subprocess.DEVNULL,
-                timeout=SUBPROCESS_TIMEOUT,
-            ).decode()
-            gpu_temps: List[float] = []
-            current_device = ""
-            for line in sensors_output.split('\n'):
-                line = line.strip()
-                if not line:
-                    continue
-
-                if ':' not in line:
-                    current_device = line.lower()
-                    continue
-
-                name, value = line.split(':', 1)
-                name = name.lower()
-
-                if '°C' in value:
-                    temp = self._parse_sensor_temp(value)
-                    if temp is None:
-                        continue
-
-                    if any(k in name for k in ['cpu', 'package', 'core', 'tdie', 'tctl']):
-                        temps['CPU'] = max(temps['CPU'], temp)
-                    elif any(k in name for k in ['gpu', 'edge', 'junction', 'mem']) or 'gpu' in current_device:
-                        gpu_temps.append(temp)
-                    elif any(k in name for k in ['mb', 'board', 'systin', 'cputin']):
-                        temps['Motherboard'] = max(temps['Motherboard'], temp)
-            if gpu_temps:
-                temps['GPU'] = max(gpu_temps)
-        except FileNotFoundError:
-            logger.debug("lm-sensors not found, skipping")
-        except subprocess.TimeoutExpired:
-            logger.warning("sensors command timed out")
-        except subprocess.CalledProcessError:
-            logger.debug("sensors command failed, skipping")
-        except Exception:
-            logger.exception("Unexpected error reading lm-sensors")
-
-        # Try smartctl for storage temperature — discover devices dynamically
-        try:
-            block_devices = os.listdir('/sys/block/')
-            for device in block_devices:
-                smart_path = Path(f'/dev/{device}')
-                if not smart_path.exists():
-                    continue
-                try:
-                    smart_output = subprocess.check_output(
-                        ['smartctl', '-A', str(smart_path)],
-                        stderr=subprocess.DEVNULL,
-                        timeout=SUBPROCESS_TIMEOUT,
-                    ).decode()
-                    for line in smart_output.split('\n'):
-                        if 'Temperature' in line or 'temp' in line.lower():
-                            parts = line.split()
-                            # The temperature value is typically the last numeric field
-                            for part in reversed(parts):
-                                try:
-                                    storage_temp = float(part)
-                                    if 0 < storage_temp < 120:  # sanity check
-                                        temps['Storage'] = max(temps['Storage'], storage_temp)
-                                        break
-                                except ValueError:
-                                    continue
-                    break  # Found one device with temp data, that's enough
-                except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
-                    continue
-        except Exception:
-            logger.debug("smartctl not available or no block devices found")
-
-        temps['RAM'] = self.get_ram_temp()
+            sensors = psutil.sensors_temperatures()
+        except (AttributeError, OSError):
+            sensors = {}
+        for device, entries in sensors.items():
+            for entry in entries:
+                name = (device + ' ' + (entry.label or '')).lower()
+                component = next((c for c, keys in {
+                    'CPU': ('coretemp', 'k10temp', 'zenpower', 'cpu', 'package', 'tdie', 'tctl'),
+                    'GPU': ('amdgpu', 'nouveau', 'gpu'),
+                    'Storage': ('nvme', 'drivetemp'),
+                    'RAM': ('dimm', 'jc42'),
+                    'Motherboard': ('systin', 'motherboard')
+                }.items() if any(k in name for k in keys)), None)
+                if component:
+                    self._record(temps, component, entry.current)
         return temps
 
     @staticmethod
@@ -224,55 +133,23 @@ class SystemHeatmap:
         except (ValueError, IndexError):
             return None
 
-    def get_macos_temps(self) -> Dict[str, float]:
-        temps = self.get_fallback_temps()
-
-        # Try powermetrics — requires sudo on macOS
+    def get_macos_temps(self):
+        # Never invoke sudo or prompt for credentials from a sampling loop.
+        temps = self._empty_temps()
         try:
             output = subprocess.check_output(
-                ['sudo', 'powermetrics', '-n', '1', '-i', '1000'],
-                stderr=subprocess.DEVNULL,
-                timeout=SUBPROCESS_TIMEOUT,
+                ['powermetrics', '-n', '1', '-i', '1000'],
+                stderr=subprocess.DEVNULL, timeout=SUBPROCESS_TIMEOUT,
             ).decode()
-            gpu_temps: List[float] = []
-            for line in output.split('\n'):
-                if 'CPU die temperature' in line:
-                    try:
-                        temps['CPU'] = float(line.split(':')[1].split()[0])
-                    except (ValueError, IndexError):
-                        pass
-                elif 'GPU die temperature' in line:
-                    try:
-                        gpu_temps.append(float(line.split(':')[1].split()[0]))
-                    except (ValueError, IndexError):
-                        pass
-            if gpu_temps:
-                temps['GPU'] = max(gpu_temps)
-        except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
-            logger.debug("powermetrics not available (requires sudo on macOS)")
-            logger.info("Tip: Run with sudo for accurate macOS temperature readings")
-        except Exception:
-            logger.exception("Unexpected error reading macOS temperatures")
-
-        # Try system_profiler (no sudo needed)
-        try:
-            output = subprocess.check_output(
-                ['system_profiler', 'SPHardwareDataType'],
-                stderr=subprocess.DEVNULL,
-                timeout=SUBPROCESS_TIMEOUT,
-            ).decode()
-            for line in output.split('\n'):
-                if 'Processor Temperature' in line:
-                    try:
-                        temps['CPU'] = float(line.split(':')[1].strip().replace('°C', ''))
-                    except (ValueError, IndexError):
-                        pass
-        except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
-            logger.debug("system_profiler not available")
-        except Exception:
-            logger.exception("Unexpected error reading macOS hardware info")
-
-        temps['RAM'] = self.get_ram_temp()
+            for line in output.splitlines():
+                for component in ('CPU', 'GPU'):
+                    if component + ' die temperature' in line:
+                        try:
+                            self._record(temps, component, float(line.split(':')[1].split()[0]))
+                        except (ValueError, IndexError):
+                            continue
+        except (OSError, subprocess.SubprocessError):
+            logger.debug('macOS temperature sensors unavailable with current permissions')
         return temps
 
     def get_ram_temp(self) -> float:
@@ -304,16 +181,42 @@ class SystemHeatmap:
             'RAM': base_temps['RAM'] + (memory_percent * 0.3)
         }
 
-    def get_system_temps(self) -> Dict[str, float]:
-        if self.system == "Windows":
-            return self.get_windows_temps()
-        elif self.system == "Linux":
-            return self.get_linux_temps()
-        elif self.system == "Darwin":
-            return self.get_macos_temps()
-        return self.get_fallback_temps()
+    def get_readings(self):
+        provider = {'Windows': self.get_windows_temps, 'Linux': self.get_linux_temps,
+                    'Darwin': self.get_macos_temps}.get(self.system, self._empty_temps)
+        temps = provider()
+        source = {'Windows': 'OpenHardwareMonitor WMI', 'Linux': 'psutil/hwmon',
+                  'Darwin': 'powermetrics'}.get(self.system, 'unavailable')
+        self.readings = {c: Reading.temperature(v, source) for c, v in temps.items()}
+        if temps['GPU'] is None and shutil.which('nvidia-smi'):
+            if time.monotonic() - self._gpu_checked_at >= 2:
+                from .monitor import GPUDetector
+                values = [g['temperature'] for g in GPUDetector.get_nvidia_info()
+                          if g.get('temperature') is not None]
+                self._gpu_reading = Reading.temperature(max(values) if values else None, 'nvidia-smi')
+                self._gpu_checked_at = time.monotonic()
+            if self._gpu_reading is not None:
+                self.readings['GPU'] = self._gpu_reading
+        if self.estimates:
+            estimates = self.get_fallback_temps()
+            for component, reading in self.readings.items():
+                if not reading.available:
+                    self.readings[component] = Reading.temperature(estimates[component], 'estimate')
+        return self.readings
+
+    def get_system_temps(self):
+        return {component: reading.value for component, reading in self.get_readings().items()}
+
+    def format_temp(self, component, value):
+        if value is None:
+            return 'N/A'
+        estimated = self.readings.get(component)
+        suffix = ' (estimated)' if estimated and estimated.source == 'estimate' else ''
+        return f'{value:.1f}°C{suffix}'
 
     def get_temp_char(self, temp: float) -> tuple:
+        if temp is None or not np.isfinite(temp):
+            return ('·', "dim")
         if temp < 45:
             return ('·', "green")
         elif temp < 70:
@@ -322,10 +225,8 @@ class SystemHeatmap:
             return ('█', "red")
 
     def update_component_map(self, component: str, temp: float):
-        rows, cols = self.components[component]['size']
-        base_temp = float(temp)
-        noise = np.random.normal(0, 2, (rows, cols))
-        self.temp_maps[component] = np.clip(base_temp + noise, 0, 100)
+        self.temp_maps[component] = np.full(self.components[component]['size'],
+                                                 np.nan if temp is None else temp)
 
     def run(self, interval: float = 1.0, duration: Optional[int] = None) -> int:
         if duration is not None and duration <= 0:
@@ -352,19 +253,20 @@ class SystemHeatmap:
             Layout(name="stats")
         )
 
-        start_time = time.time()
+        schedule = Schedule(interval, duration)
         update_count = 0
 
         try:
             with Live(layout, refresh_per_second=2, screen=True):
                 while True:
-                    elapsed = time.time() - start_time
-                    if duration and elapsed >= duration:
+                    elapsed = schedule.elapsed
+                    if schedule.finished:
                         break
 
                     temps = self.get_system_temps()
-                    self.temp_history['CPU'].add_point(temps['CPU'])
-                    self.temp_history['GPU'].add_point(temps['GPU'])
+                    for component in ('CPU', 'GPU'):
+                        if temps[component] is not None:
+                            self.temp_history[component].add_point(temps[component])
 
                     # Update Layout
                     header = (
@@ -378,11 +280,11 @@ class SystemHeatmap:
                     layout["heatmap"].update(self.generate_system_layout(temps))
 
                     layout["cpu_graph"].update(Panel(
-                        self.temp_history['CPU'].render(f"CPU Temp: {temps['CPU']:.1f}°C"),
+                        self.temp_history['CPU'].render(f"CPU Temp: {self.format_temp('CPU', temps['CPU'])}"),
                         title="CPU Thermal Trend", border_style="red"
                     ))
                     layout["gpu_graph"].update(Panel(
-                        self.temp_history['GPU'].render(f"GPU Temp: {temps['GPU']:.1f}°C"),
+                        self.temp_history['GPU'].render(f"GPU Temp: {self.format_temp('GPU', temps['GPU'])}"),
                         title="GPU Thermal Trend", border_style="magenta"
                     ))
 
@@ -390,8 +292,8 @@ class SystemHeatmap:
                     stats_table.add_column("Component", style="cyan")
                     stats_table.add_column("Temp", style="yellow")
                     for comp, val in temps.items():
-                        color = "green" if val < 45 else "yellow" if val < 70 else "red"
-                        stats_table.add_row(comp, f"[{color}]{val:.1f}°C[/{color}]")
+                        color = self.get_temp_char(val)[1]
+                        stats_table.add_row(comp, f"[{color}]{self.format_temp(comp, val)}[/{color}]")
 
                     layout["stats"].update(Panel(stats_table, title="Current Temps", border_style="white"))
 
@@ -402,20 +304,21 @@ class SystemHeatmap:
                     ))
 
                     update_count += 1
-                    time.sleep(interval)
+                    schedule.wait()
         except KeyboardInterrupt:
             pass
 
         return update_count
 
-    def generate_system_layout(self, temps: Optional[Dict[str, float]] = None) -> Panel:
+    def generate_system_layout(self, temps: Optional[Dict[str, Optional[float]]] = None) -> Panel:
         if temps is None:
             temps = self.get_system_temps()
 
         layout = [[' ' for _ in range(40)] for _ in range(25)]
         colors = [[None for _ in range(40)] for _ in range(25)]
 
-        for component, info in self.components.items():
+        for component in sorted(self.components, key=lambda c: c != 'Motherboard'):
+            info = self.components[component]
             pos_x, pos_y = info['position']
             size_x, size_y = info['size']
 
@@ -430,7 +333,7 @@ class SystemHeatmap:
 
             label_x = pos_x + size_x // 2
             label_y = pos_y + size_y // 2
-            label = f"{component[:3]} {temps[component]:.1f}°C"
+            label = f"{component[:3]} {self.format_temp(component, temps[component])}"
             for idx, char in enumerate(label):
                 if 0 <= label_y + idx < len(layout[0]):
                     layout[label_x][label_y + idx] = char
@@ -444,6 +347,6 @@ class SystemHeatmap:
 
         return Panel(
             text,
-            title="Internal Thermal Map",
+            title="Internal Thermal Map (component schematic)",
             border_style="blue"
         )

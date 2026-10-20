@@ -133,7 +133,7 @@ class TestNetworkMonitor:
     def monitor(self):
         m = NetworkMonitor()
         m._prev_io = {}
-        m._prev_time = time.time()
+        m._prev_time = time.monotonic()
         return m
 
     @patch('psutil.net_if_stats')
@@ -184,7 +184,7 @@ class TestNetworkMonitor:
         }
         m = NetworkMonitor()
         m._prev_io = {'eth0': FakeIO(bytes_sent=0, bytes_recv=0)}
-        m._prev_time = time.time() - 1.0
+        m._prev_time = time.monotonic() - 1.0
         m._ensure_history(['eth0'])
         speeds = m.get_speeds()
         assert 'eth0' in speeds
@@ -199,7 +199,7 @@ class TestNetworkMonitor:
         }
         m = NetworkMonitor()
         m._prev_io = {'eth0': FakeIO(bytes_sent=0, bytes_recv=0)}
-        m._prev_time = time.time()
+        m._prev_time = time.monotonic()
         m._ensure_history(['eth0'])
         speeds = m.get_speeds()
         assert 'eth0' in speeds
@@ -333,7 +333,7 @@ class TestNetworkMonitor:
         m = NetworkMonitor()
         m.running = True
         m._prev_io = {'eth0': FakeIO(bytes_sent=0, bytes_recv=0)}
-        m._prev_time = time.time()
+        m._prev_time = time.monotonic()
 
         with patch('time.sleep', return_value=None):
             m.run_dashboard(interval=0.01, duration=0.02)
@@ -346,7 +346,7 @@ class TestNetworkMonitor:
     @patch('psutil.net_if_addrs')
     def test_run_dashboard_export(
         self, mock_addrs, mock_stats, mock_counters,
-        mock_connections, mock_snmp
+        mock_connections, mock_snmp, tmp_path
     ):
         mock_stats.return_value = {'eth0': FakeStat(isup=True, speed=1000)}
         mock_addrs.return_value = {
@@ -361,13 +361,17 @@ class TestNetworkMonitor:
         m = NetworkMonitor()
         m.running = True
         m._prev_io = {'eth0': FakeIO(bytes_sent=0, bytes_recv=0)}
-        m._prev_time = time.time()
+        m._prev_time = time.monotonic()
 
-        with patch('time.sleep', return_value=None):
-            with patch.object(m, 'export_csv') as mock_export:
-                m.run_dashboard(interval=0.01, duration=0.02, export=True)
-                assert len(m._export_data) > 0
-                mock_export.assert_called_once()
+        destination = tmp_path / 'network.csv'
+        with patch('guro.core.network.Live'), patch('time.sleep', return_value=None):
+            m.run_dashboard(interval=0.01, duration=0.02, export=True, output_path=str(destination))
+        import csv
+        with destination.open() as stream:
+            rows = list(csv.DictReader(stream))
+        assert rows
+        assert rows[0]['interface'] == 'eth0'
+        assert len(m._export_data) <= 60
 
     def test_export_csv_no_data(self):
         m = NetworkMonitor()
@@ -385,7 +389,7 @@ class TestNetworkMonitor:
         }
         m = NetworkMonitor()
         m._prev_io = {'eth0': FakeIO(bytes_sent=1000, bytes_recv=2000)}
-        m._prev_time = time.time() - 1.0
+        m._prev_time = time.monotonic() - 1.0
 
         with patch('psutil.net_io_counters') as mock_counters:
             mock_counters.return_value = {
@@ -405,3 +409,28 @@ class TestNetworkMonitor:
 
 
 
+
+
+def test_one_connection_scan_and_one_name_lookup_per_pid():
+    monitor = NetworkMonitor()
+    address = FakeConnAddr('127.0.0.1', 1234)
+    connections = [FakeConn(pid=42, laddr=address), FakeConn(pid=42, laddr=address)]
+    with patch.object(monitor, 'get_interfaces', return_value=[]), patch('psutil.net_io_counters', return_value={}), patch('psutil.net_connections', return_value=connections) as scan, patch('psutil.Process') as process:
+        process.return_value.name.return_value = 'worker'
+        sample = monitor.collect_sample()
+    assert scan.call_count == 1
+    assert process.call_count == 1
+    assert sample['tcp_states']['ESTABLISHED'] == 2
+    assert len(sample['connections']) == 2
+
+
+def test_interface_changes_refresh_history():
+    monitor = NetworkMonitor()
+    with patch.object(monitor, 'get_interfaces', side_effect=[
+        [{'name': 'eth0', 'isup': True}], [{'name': 'wlan0', 'isup': True}],
+    ]), patch('psutil.net_io_counters', return_value={}), patch('psutil.net_connections', return_value=[]):
+        monitor.collect_sample()
+        sample = monitor.collect_sample()
+    assert sample['interfaces'][0]['name'] == 'wlan0'
+    assert 'eth0_up' not in monitor._speed_history
+    assert 'wlan0_up' in monitor._speed_history

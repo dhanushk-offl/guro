@@ -5,6 +5,8 @@ import csv
 import datetime
 import socket
 from collections import deque
+from contextlib import nullcontext
+from .telemetry import Schedule, SampleWriter, timestamp
 from typing import Dict, List, Optional, Tuple
 
 import psutil
@@ -82,10 +84,11 @@ class NetworkMonitor:
         self._stop_event = threading.Event()
         self._speed_history: Dict[str, deque] = {}
         self._prev_io: Dict = {}
-        self._prev_time = time.time()
-        self._start_time = time.time()
+        self._prev_time = time.monotonic()
+        self._start_time = time.monotonic()
         self._console = Console()
-        self._export_data: List[Dict] = []
+        self._export_data = deque(maxlen=60)
+        self.connection_status = 'available'
 
     @property
     def running(self):
@@ -136,7 +139,7 @@ class NetworkMonitor:
 
     def get_speeds(self) -> Dict[str, Tuple[float, float]]:
         current = psutil.net_io_counters(pernic=True)
-        now = time.time()
+        now = time.monotonic()
         elapsed = now - self._prev_time
         if elapsed <= 0:
             elapsed = 0.001
@@ -155,10 +158,10 @@ class NetworkMonitor:
         self._prev_time = now
         return speeds
 
-    def get_tcp_states(self) -> Dict[str, int]:
+    def get_tcp_states(self, snapshot=None) -> Dict[str, int]:
         states = {}
         try:
-            for conn in psutil.net_connections(kind='tcp'):
+            for conn in (snapshot if snapshot is not None else self._connection_snapshot()):
                 status = conn.status or 'NONE'
                 states[status] = states.get(status, 0) + 1
         except (psutil.AccessDenied, PermissionError):
@@ -168,16 +171,28 @@ class NetworkMonitor:
     def get_protocol_stats(self) -> Dict:
         return _get_proc_net_snmp()
 
-    def get_connections(self) -> List[Dict]:
+    def _connection_snapshot(self):
+        try:
+            connections = psutil.net_connections(kind='tcp')
+            self.connection_status = 'available'
+            return connections
+        except (psutil.AccessDenied, PermissionError):
+            self.connection_status = 'permission denied'
+            return []
+
+    def get_connections(self, snapshot=None) -> List[Dict]:
         conns = []
         try:
-            for c in psutil.net_connections(kind='tcp'):
+            names = {}
+            for c in (snapshot if snapshot is not None else self._connection_snapshot()):
                 if c.status == 'NONE' and not c.raddr:
                     continue
                 pname = ''
                 try:
                     if c.pid:
-                        pname = psutil.Process(c.pid).name()
+                        if c.pid not in names:
+                            names[c.pid] = psutil.Process(c.pid).name()
+                        pname = names[c.pid]
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
                 conns.append({
@@ -190,6 +205,18 @@ class NetworkMonitor:
         except (psutil.AccessDenied, PermissionError):
             pass
         return conns
+
+    def collect_sample(self):
+        interfaces = self.get_interfaces()
+        self._ensure_history([i['name'] for i in interfaces if i['isup']])
+        present = {i['name'] + suffix for i in interfaces for suffix in ('_up', '_down')}
+        self._speed_history = {k: v for k, v in self._speed_history.items() if k in present}
+        snapshot = self._connection_snapshot()
+        return {
+            'timestamp': timestamp(), 'interfaces': interfaces, 'speeds': self.get_speeds(),
+            'tcp_states': self.get_tcp_states(snapshot), 'protocols': self.get_protocol_stats(),
+            'connections': self.get_connections(snapshot), 'connection_status': self.connection_status,
+        }
 
     def _build_header(self, elapsed: float) -> Panel:
         m, s = divmod(int(elapsed), 60)
@@ -264,7 +291,7 @@ class NetworkMonitor:
                 Text(c['status'], style=style),
                 c['remote'][:21],
             )
-        return Panel(table, title="[CONN] Top Connections", border_style="magenta")
+        return Panel(table, title=f"[CONN] Connections ({self.connection_status})", border_style="magenta")
 
     def _build_history_panel(self, interfaces: List[Dict], speeds: Dict) -> Panel:
         table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
@@ -286,7 +313,7 @@ class NetworkMonitor:
             table.add_row("↑", name, f"[green]{up_hist}[/green]", up_speed)
             table.add_row("↓", name, f"[blue]{down_hist}[/blue]", down_speed)
 
-        return Panel(table, title="Bandwidth History (last 60s)", border_style="blue")
+        return Panel(table, title="Bandwidth History (last 60 samples)", border_style="blue")
 
     def export_csv(self, filepath: Optional[str] = None):
         if not self._export_data:
@@ -304,7 +331,9 @@ class NetworkMonitor:
 
     def run_dashboard(self, interval: float = 1.0,
                       duration: Optional[int] = None,
-                      export: bool = False):
+                      export: bool = False, output_path: Optional[str] = None):
+        schedule = Schedule(interval, duration)
+        self.running = True
         interfaces = self.get_interfaces()
         active = [i['name'] for i in interfaces if i['isup']]
         self._ensure_history(active)
@@ -321,28 +350,38 @@ class NetworkMonitor:
             Layout(name="connections"),
         )
 
-        start = time.time()
+        path = output_path or f'network_monitor_{datetime.datetime.now():%Y%m%d_%H%M%S}.csv'
+        with (open(path, 'w', newline='', encoding='utf-8') if export else nullcontext()) as stream:
+            writer_context = SampleWriter(stream, 'csv', ['timestamp', 'interface', 'upload_bps', 'download_bps']) if stream else nullcontext()
+            self._run_dashboard(layout, schedule, writer_context, export)
+        if export:
+            self._console.print(f'[green]Data exported to {path}[/green]')
 
+    def _run_dashboard(self, layout, schedule, writer_context, export):
         try:
-            with Live(layout, refresh_per_second=4, screen=True) as live:
+            with writer_context as writer, Live(layout, refresh_per_second=4, screen=True):
                 while self.running:
-                    elapsed = time.time() - start
-                    if duration and elapsed >= duration:
+                    elapsed = schedule.elapsed
+                    if schedule.finished:
                         break
 
-                    speeds = self.get_speeds()
-                    tcp_states = self.get_tcp_states()
-                    proto_stats = self.get_protocol_stats()
-                    conns = self.get_connections()
+                    sample = self.collect_sample()
+                    interfaces = sample['interfaces']
+                    speeds = sample['speeds']
+                    tcp_states = sample['tcp_states']
+                    proto_stats = sample['protocols']
+                    conns = sample['connections']
 
                     if export:
                         for name, (up, down) in speeds.items():
-                            self._export_data.append({
-                                'timestamp': round(elapsed, 2),
+                            row = {
+                                'timestamp': sample['timestamp'],
                                 'interface': name,
                                 'upload_bps': round(up, 2),
                                 'download_bps': round(down, 2),
-                            })
+                            }
+                            writer.write(row)
+                            self._export_data.append(row)
 
                     layout["header"].update(self._build_header(elapsed))
                     layout["adapters"].update(
@@ -354,14 +393,13 @@ class NetworkMonitor:
                     layout["connections"].update(
                         self._build_connections_panel(conns))
 
-                    time.sleep(interval)
+                    schedule.wait()
 
         except KeyboardInterrupt:
             pass
         finally:
             self.running = False
-            if export:
-                self.export_csv()
+
 
     def list_interfaces(self):
         interfaces = self.get_interfaces()
@@ -388,7 +426,7 @@ class NetworkMonitor:
 
     def show_speed(self):
         self._prev_io = psutil.net_io_counters(pernic=True)
-        self._prev_time = time.time()
+        self._prev_time = time.monotonic()
         time.sleep(1)
         speeds = self.get_speeds()
 
@@ -416,7 +454,7 @@ class NetworkMonitor:
         conns = self.get_connections()
         if not conns:
             self._console.print("[yellow]No active TCP connections found "
-                                "(try running with elevated permissions)[/yellow]")
+                                f"({self.connection_status})[/yellow]")
             return
 
         table = Table(title=f"Active TCP Connections ({len(conns)} total)",

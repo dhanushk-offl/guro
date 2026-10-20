@@ -21,7 +21,7 @@
 
 ## Overview
 
-Guro is a sophisticated terminal-based diagnostic toolkit designed for granular system resource monitoring and hardware analysis. Built for engineers and enthusiasts, it provides a desktop-class dashboard experience within the command-line environment, delivering precise telemetry across Linux, macOS, and Windows.
+Guro is a sophisticated terminal-based diagnostic toolkit designed for granular system resource monitoring and hardware analysis. Built for engineers and enthusiasts, it provides a desktop-class dashboard experience within the command-line environment, delivering telemetry across Linux, macOS, and Windows, with explicit availability reporting for unsupported sensors.
 
 🌐 **Website**: [guro.pages.dev](https://guro.pages.dev/)
 
@@ -42,13 +42,13 @@ Guro is a sophisticated terminal-based diagnostic toolkit designed for granular 
 ## Key Capabilities
 
 ### Intelligent Monitoring
-The performance module utilizes high-frequency sampling to provide real-time ASCII-based historic trending. It offers a comprehensive view of system load including individual core utilization and physical/virtual memory envelopes.
+The performance module utilizes high-frequency sampling to provide real-time ASCII-based historic trending. It shows aggregate CPU utilization, memory usage, GPU metrics where supported, and the ten processes using the most CPU.
 
 ### Thermal Intelligence
-Guro implements a robust, regex-free data acquisition layer for hardware sensors. By interfacing directly with `lm-sensors` on Linux and `WMI` on Windows, it provides reliable thermal mapping even across diverse kernel and driver versions.
+Guro reads Linux hwmon sensors through psutil, OpenHardwareMonitor WMI sensors on Windows, and available powermetrics readings on macOS. NVIDIA temperatures can also come from nvidia-smi. Missing readings display as `N/A`. The heatmap is a component schematic; its cells do not represent independently measured spatial temperatures. Optional estimates require `--estimates` and are labeled.
 
 ### Hardware-Agnostic Benchmarking
-The benchmarking suite is designed with hardware safety as a priority. It ensures system stability by monitoring thermal thresholds during heavy load tests. It features full awareness for NVIDIA, AMD, and Integrated graphics solutions.
+CPU benchmarks report NumPy/BLAS matrix throughput; memory benchmarks report copy bandwidth using reusable buffers capped at 32 MiB and 1% of available memory. Runs stop at 90% system memory use or a measured component temperature of 90°C. Thermal coverage depends on exposed sensors and is included in the report. GPU workloads are currently unsupported; `guro gpu` provides device telemetry.
 
 ### Network Intelligence
 Real-time bandwidth monitoring with per-interface upload/download sparklines, TCP state distribution (ESTABLISHED, LISTEN, TIME_WAIT, etc.), process-level connection tracking, and `/proc/net/snmp` protocol statistics — all with zero additional dependencies beyond psutil.
@@ -56,6 +56,8 @@ Real-time bandwidth monitoring with per-interface upload/download sparklines, TC
 ---
 
 ## Installation
+
+Requires Python 3.9 or newer.
 
 ### Standard Method
 ```bash
@@ -75,6 +77,7 @@ Access Guro via its unified command-line interface.
 
 | Module | Command | Description |
 | :--- | :--- | :--- |
+| **Doctor** | `guro doctor` | Reports tools, sensor availability, connection permissions, and GPU capabilities. |
 | **Monitor** | `guro monitor` | Launches the interactive system performance dashboard. |
 | **Thermal** | `guro heatmap` | Initiates spatial hardware heatmapping and trend analysis. |
 | **Graphics** | `guro gpu` | Executes a diagnostic status report for all detected GPUs. |
@@ -85,6 +88,25 @@ Access Guro via its unified command-line interface.
 | | `guro network --connections` | Show active TCP connections with process names and states. |
 
 ---
+
+## Structured output and exports
+
+```bash
+guro doctor --format json
+guro monitor --duration 10 --format jsonl --output samples.jsonl
+guro heatmap --duration 10 --format json --output temperatures.json
+guro network --duration 10 --export --output bandwidth.csv
+guro gpu --format json
+guro benchmark --type mini --cpu-only --format json --output benchmark.json
+```
+
+`--format json` writes a JSON array for monitoring sessions and a single JSON value for snapshots and benchmark reports. `jsonl` writes one JSON value per line. Structured output contains no banners or status spinners. `--output` writes to a file; otherwise structured output goes to stdout. Errors go to stderr and return a nonzero exit status. Existing destination files are replaced.
+
+CSV (`--export`) and structured monitoring exports stream and flush each sample. Recent dashboard history is bounded to 60 samples. JSON arrays close on normal completion, Ctrl+C, and handled collection errors; use JSONL for recovery after abrupt process termination. Network speed pairs are `[upload_bytes_per_second, download_bytes_per_second]`. Connection permissions are reported separately from an empty connection list. Network totals may include virtual and loopback interfaces.
+
+Temperature objects include `value` (null when unavailable), `unit`, `source`, `timestamp`, and `available`. `--estimates` affects only missing heatmap readings; measured readings always take precedence. Estimates are excluded from benchmark safety decisions.
+
+`mini` and `god` request total budgets of 30 and 60 seconds. Default runs split time between CPU and memory workloads; `--cpu-only` uses the full budget for CPU. Collection and individual operations can overrun a deadline. Reports include actual elapsed time, configuration, and an explicit completion/abort outcome. GPU-only requests return `unsupported` with a nonzero status. Throughput excludes telemetry time; results depend on the NumPy/BLAS build, thread settings, cache behavior, and background load. Memory copy MB/s counts payload bytes copied, not combined read/write bus traffic.
 
 ## Roadmap
 

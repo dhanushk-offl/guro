@@ -1,5 +1,36 @@
 # Guro Release Notes 🚀
 
+## Unreleased — Telemetry accuracy and benchmark reliability
+
+### Added
+
+- `guro doctor` reports sensor availability, vendor tools, connection permissions, and GPU workload support.
+- `--format json|jsonl` and `--output PATH` provide structured snapshots and streaming monitoring exports.
+- Benchmark reports include CPU matrix throughput, memory copy bandwidth, actual elapsed time, configuration, thermal coverage, and explicit outcomes.
+
+### Fixed and improved
+
+- Missing temperatures display as `N/A`; optional `heatmap --estimates` readings are labeled and never override measurements or drive benchmark stops.
+- The heatmap uses uniform component readings rather than generated spatial noise. Sampling never invokes sudo.
+- GPU parsing handles quoted PCI output, structured AMD data, stable PCI identities, and unavailable values.
+- CPU sampling uses one process scan without an artificial sleep. Network views share one TCP snapshot and resolve each PID once per sample.
+- Monotonic deadlines account for collection time. Interface changes refresh network history, and CSV exports flush samples without retaining the full session.
+- Benchmarks reuse bounded buffers and stop on measured thermal limits or memory pressure. Full CPU utilization alone does not abort a run.
+- CLI failures return nonzero statuses. Conflicting benchmark modes and invalid sampling arguments are rejected.
+- Package metadata and dependencies are centralized in `pyproject.toml`; CI adds newer Python versions, Windows/macOS jobs, and installed-wheel smoke checks.
+
+### Compatibility and limitations
+
+- Python 3.9+ is required to match the existing Pygments 2.20 security minimum.
+- GPU workloads remain unsupported. `benchmark --gpu-only` reports that outcome with a nonzero status; `guro gpu` continues to expose available telemetry.
+- Thermal protection depends on exposed sensors. The heatmap is a component schematic, and the memory workload measures cached copy throughput rather than peak DRAM bandwidth.
+
+### Validation
+
+- 127 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
+- Windows/macOS CI jobs are configured; real hardware coverage for those platforms remains to be established.
+- Local measurements and methodology are recorded in [the performance review](docs/PERFORMANCE_REVIEW.md).
+
 ## v1.2.0 — Network Intelligence
 *June 15, 2026*
 

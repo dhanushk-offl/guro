@@ -1,27 +1,9 @@
-# Thermal Analysis Methodology
+# Thermal acquisition and display
 
-Guro's thermal module provides a spatial and temporal analysis of hardware temperature envelopes.
+Linux temperatures come from psutil's hwmon sensor readings. Sensors are categorized by device and label, using the highest valid reading within each component. Windows uses temperature sensors exposed through OpenHardwareMonitor WMI. macOS attempts powermetrics with existing permissions; Guro never invokes sudo or prompts for credentials. NVIDIA GPU temperatures are queried through nvidia-smi when the platform provider lacks a GPU reading and are cached for two seconds with their original acquisition timestamp.
 
-## Acquisition Protocols
+Every reading carries its unit, source, timestamp, and availability. Values outside -50 to 150 Celsius and nonfinite values are rejected. Missing components display N/A. Passing `--estimates` fills only missing readings with explicitly labeled utilization-based estimates. Real measurements always take precedence, including measurements below the estimated value.
 
-Thermal metrics are retrieved through platform-specific diagnostic interfaces:
+The fixed schematic shows one aggregate temperature per component. Cells have uniform values; there is no generated noise or claim of measured spatial variation. The motherboard background is drawn before foreground components. History contains measured values, or labeled estimates only when requested.
 
-### Linux (sysfs/lm-sensors)
-Guro parses the output of `sensors` (from the `lm-sensors` package). The implementation prioritizes category-based data extraction over line-based parsing to ensure resilience against varying sensor chip naming conventions across motherboard manufacturers.
-
-### Windows (WMI)
-On Windows environments, Guro interfaces with Windows Management Instrumentation (WMI) via the `wmi` Python wrapper. It specifically targets the `MSAcpi_ThermalZoneTemperature` and `Win32_TemperatureProbe` classes where available.
-
-### macOS (SMC)
-Thermal data on macOS is acquired through the System Management Control (SMC) interface via `powermetrics` or specialized binary calls.
-
-## Spatial Heatmapping
-
-The TUI generates a localized schematic of the hardware environment. Temperatures are mapped to a 2D coordinate system representing:
-- **CPU Cores**: Thermal metrics are mapped to a central processing block.
-- **Memory Arrays**: Visualized as modular blocks flanking the CPU.
-- **Graphics Units**: Dynamically added based on the count of discovered discrete GPUs.
-
-## Safety Thresholds
-
-The module monitors for critical thermal events. If a component exceeds a predefined safety threshold (typically 90°C), a visual warning is triggered in the TUI to inform the user of potential thermal throttling.
+The heatmap provides color thresholds for display. Benchmark stop conditions are implemented separately and never use estimates. Unsupported sensors remain unavailable, so thermal coverage must be read alongside benchmark results.
