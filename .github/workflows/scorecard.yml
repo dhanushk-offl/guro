@@ -29,12 +29,34 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run OpenSSF Scorecard analysis
+      - name: Run OpenSSF Scorecard analysis (attempt 1)
+        id: scorecard_analysis_attempt_1
+        continue-on-error: true
         uses: ossf/scorecard-action@v2.3.1
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
+
+      - name: Wait before retry
+        if: steps.scorecard_analysis_attempt_1.outcome == 'failure'
+        run: sleep 15
+
+      - name: Run OpenSSF Scorecard analysis (attempt 2)
+        id: scorecard_analysis_attempt_2
+        if: steps.scorecard_analysis_attempt_1.outcome == 'failure'
+        continue-on-error: true
+        uses: ossf/scorecard-action@v2.3.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Fail if Scorecard retries did not recover
+        if: steps.scorecard_analysis_attempt_1.outcome == 'failure' && steps.scorecard_analysis_attempt_2.outcome != 'success'
+        run: |
+          echo "OpenSSF Scorecard analysis failed after retry."
+          exit 1
 
       # This was the step failing due to permissions
       - name: Upload SARIF artifact

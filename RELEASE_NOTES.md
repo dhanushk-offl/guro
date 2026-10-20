@@ -25,9 +25,16 @@
 - GPU workloads remain unsupported. `benchmark --gpu-only` reports that outcome with a nonzero status; `guro gpu` continues to expose available telemetry.
 - Thermal protection depends on exposed sensors. The heatmap is a component schematic, and the memory workload measures cached copy throughput rather than peak DRAM bandwidth.
 
+### Integration with v1.1.7
+
+- Retains master's version metadata, CodeQL/Scorecard retries, compact block charts, missing link-speed handling, and version consistency tests.
+- Initialization spinners finish before live views begin and are disabled for structured output; heatmap estimate options survive initialization.
+- Follows master's removal of `setup.py`; builds use `pyproject.toml` directly.
+- The bounded benchmark replaces the previous external-load watchdog. Total memory pressure still aborts a run, while full CPU utilization alone does not.
+
 ### Validation
 
-- 127 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
+- 136 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
 - Windows/macOS CI jobs are configured; real hardware coverage for those platforms remains to be established.
 - Local measurements and methodology are recorded in [the performance review](docs/PERFORMANCE_REVIEW.md).
 

@@ -127,6 +127,25 @@ def test_ascii_graph_empty():
     assert rendered == ""
 
 
+def test_ascii_graph_clamps_out_of_range_values():
+    """Out-of-range samples are clamped so bars never index outside the column."""
+    graph = ASCIIGraph(width=20, height=4)
+    for value in [-50, 150, -999, 500]:
+        graph.add_point(value)
+
+    rendered = graph.render("Clamped")
+    assert isinstance(rendered, str)
+    assert len(rendered) > 0
+    # Values below 0 clamp to an empty column, values above 100 to a full one
+    assert rendered.splitlines() == [
+        "Clamped",
+        " █ █",
+        " █ █",
+        " █ █",
+        " █ █",
+    ]
+
+
 @patch('psutil.virtual_memory')
 def test_csv_export_uses_timestamp(mock_virtual_memory, monitor):
     """Test that CSV export creates a timestamped file"""
@@ -218,3 +237,10 @@ def test_discovery_not_repeated_when_refreshing_metrics(monitor):
     with patch.object(GPUDetector, 'get_all_gpus', return_value={'available': False, 'gpus': []}) as detector:
         monitor._refresh_gpu_info()
     detector.assert_called_once_with(include_adapters=False)
+
+
+
+def test_monitor_graphs_fit_fixed_dashboard_panels(monitor):
+    # Four chart rows + title + Rich panel borders fit the seven-row slots.
+    assert monitor.cpu_graph.height == monitor.memory_graph.height == 4
+    assert monitor.cpu_graph.width == monitor.memory_graph.width == 40

@@ -237,7 +237,8 @@ class NetworkMonitor:
             name = iface['name']
             status = "[OK]" if iface['isup'] else "[!!]"
             ip = iface['ipv4'][0] if iface['ipv4'] else (iface['ipv6'][0] if iface['ipv6'] else "—")
-            speed_str = f"{iface['speed']}M" if iface['speed'] > 0 else "?"
+            speed = iface['speed'] or 0
+            speed_str = f"{speed}M" if speed > 0 else "?"
             up_speed = _format_speed(speeds.get(name, (0, 0))[0])
             down_speed = _format_speed(speeds.get(name, (0, 0))[1])
             table.add_row(name, status, ip, speed_str, up_speed, down_speed)
@@ -417,10 +418,11 @@ class NetworkMonitor:
             mac = iface['mac'] or "—"
             ipv4 = iface['ipv4'][0] if iface['ipv4'] else "—"
             ipv6 = iface['ipv6'][0] if iface['ipv6'] else "—"
-            speed = f"{iface['speed']} Mbps" if iface['speed'] > 0 else "—"
+            speed = iface['speed'] or 0
+            speed_str = f"{speed} Mbps" if speed > 0 else "—"
             duplex_map = {0: "Unknown", 1: "Half", 2: "Full"}
             duplex = duplex_map.get(iface['duplex'], "—")
-            table.add_row(iface['name'], status, mac, ipv4, ipv6, speed, duplex)
+            table.add_row(iface['name'], status, mac, ipv4, ipv6, speed_str, duplex)
 
         self._console.print(table)
 

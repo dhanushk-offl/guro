@@ -48,7 +48,7 @@ def stream_samples(collect, interval, duration, fmt, output):
 
 
 def fail(action, error):
-    logger.debug('%s failed', action, exc_info=True)
+    logger.exception('%s failed', action)
     raise click.ClickException(f'{action} failed: {error}') from error
 
 
@@ -73,7 +73,10 @@ def print_banner():
 @click.version_option(version=__version__)
 def cli():
     """🚀 Guro - A Simple System Monitoring & Benchmarking Toolkit"""
-    pass
+    logging.basicConfig(
+        level=logging.WARNING,
+        format='%(asctime)s %(levelname)s %(name)s: %(message)s'
+    )
 
 
 @cli.command()
@@ -88,19 +91,19 @@ def monitor(interval: float, duration: Optional[int], export: bool, fmt: str, ou
             raise ValueError('Use --export for CSV or --format for structured output')
         if output and fmt == 'text' and not export:
             raise ValueError('--output requires --export or a structured --format')
-        mon = SystemMonitor()
+        with (console.status('[bold green]Initializing system monitor...') if fmt == 'text' else nullcontext()):
+            mon = SystemMonitor()
         if fmt != 'text':
             stream_samples(mon.collect_sample, interval, duration, fmt, output)
             return
         if export:
             click.echo("📝 Monitoring data will be exported to a timestamped CSV file")
 
-        with console.status("[bold green]Initializing system monitor..."):
-            mon.run_performance_test(
-                interval=interval,
-                duration=duration,
-                export_data=export, output_path=output
-            )
+        mon.run_performance_test(
+            interval=interval,
+            duration=duration,
+            export_data=export, output_path=output
+        )
     except KeyboardInterrupt:
         console.print("\n[yellow]Monitoring stopped by user[/yellow]")
     except Exception as exc:
@@ -121,7 +124,8 @@ def benchmark(test_type: str, gpu_only: bool, cpu_only: bool, fmt: str, output: 
     if output and fmt == 'text':
         raise click.UsageError('--output requires --format json or jsonl')
     try:
-        bench = SafeSystemBenchmark()
+        with (console.status('[bold green]Preparing benchmark...') if fmt == 'text' else nullcontext()):
+            bench = SafeSystemBenchmark()
 
         if not test_type and fmt != 'text':
             test_type = 'mini'
@@ -200,7 +204,8 @@ def gpu(fmt: str, output: Optional[str]):
 def heatmap(interval: float, duration: int, estimates: bool, fmt: str, output: Optional[str]):
     """🌡️ Display unified system temperature heatmap"""
     try:
-        hm = SystemHeatmap(estimates=estimates)
+        with (console.status('[bold green]Initializing system heatmap...') if fmt == 'text' else nullcontext()):
+            hm = SystemHeatmap(estimates=estimates)
         if fmt != 'text':
             stream_samples(lambda: {'timestamp': timestamp(), 'temperatures': {
                 c: reading.to_dict() for c, reading in hm.get_readings().items()
@@ -209,11 +214,10 @@ def heatmap(interval: float, duration: int, estimates: bool, fmt: str, output: O
         if output:
             raise ValueError('--output requires --format json or jsonl')
 
-        with console.status("[bold green]Initializing system heatmap..."):
-            updates = hm.run(
-                interval=interval,
-                duration=duration
-            )
+        updates = hm.run(
+            interval=interval,
+            duration=duration
+        )
 
         console.print(f"\n[green]Heatmap completed after {updates} updates[/green]")
 

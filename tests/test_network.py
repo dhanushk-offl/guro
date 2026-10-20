@@ -434,3 +434,13 @@ def test_interface_changes_refresh_history():
     assert sample['interfaces'][0]['name'] == 'wlan0'
     assert 'eth0_up' not in monitor._speed_history
     assert 'wlan0_up' in monitor._speed_history
+
+
+
+def test_unknown_link_speed_renders_without_crashing():
+    monitor = NetworkMonitor()
+    iface = {'name': 'eth0', 'isup': True, 'mac': None, 'ipv4': [], 'ipv6': [],
+             'speed': None, 'duplex': 0}
+    monitor._build_adapters_panel([iface], {})
+    with patch.object(monitor, 'get_interfaces', return_value=[iface]):
+        monitor.list_interfaces()
