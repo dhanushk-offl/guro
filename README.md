@@ -57,6 +57,8 @@ Real-time bandwidth monitoring with per-interface upload/download sparklines, TC
 
 ## Installation
 
+Current release: **1.1.7**. See the [detailed release notes](RELEASE_NOTES.md#v117--trustworthy-telemetry-bounded-benchmarks-and-diagnostics).
+
 Requires Python 3.9 or newer.
 
 ### Standard Method

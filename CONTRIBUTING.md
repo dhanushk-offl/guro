@@ -55,6 +55,23 @@ All new features or bug fixes must be accompanied by relevant unit or integratio
 - **Workload isolation**: Unit tests must use controlled workloads and clocks rather than running full benchmark presets.
 - **Package verification**: Build with `python -m build`, install the wheel in a separate environment, and smoke-test `guro --version` and `guro doctor --format json` outside the source checkout.
 
+## Publishing a release
+
+Update `src/guro/_version.py` and add a matching `## vX.Y.Z` section with detailed notes in `RELEASE_NOTES.md`. Validate the notes before publishing, for example:
+
+```bash
+python scripts/prepare_release.py --tag v1.1.7 --output /tmp/release-notes.md
+```
+
+After validation and pushing the release commit to master, create an annotated tag for that exact commit and push it:
+
+```bash
+git tag -a v1.1.7 -m "Release Guro 1.1.7"
+git push origin v1.1.7
+```
+
+A version-tag push starts `python-publish.yml`. It validates the tag and notes, tests the supported Python versions, builds and checks the distributions, publishes through the `pypi` environment with trusted publishing, and creates the GitHub release with curated notes and attached distributions. Existing tags and PyPI versions are not replaced. The package version in `pyproject.toml` remains dynamic and comes from `_version.py`.
+
 ## Pull Request Process
 
 1. **Branching**: Create a feature branch from `master` and target `master` in the pull request.

@@ -1,11 +1,15 @@
 name: Upload Python Package
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -13,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +26,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Validate release tag and curated notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/prepare_release.py --tag "$RELEASE_TAG" --output "$RUNNER_TEMP/release-notes.md"
 
       - name: Install dependencies
         run: |
@@ -33,6 +42,9 @@ jobs:
         run: |
           flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Check generated dependency manifests
+        run: python scripts/sync_requirements.py --check
 
       - name: Run tests
         run: |
@@ -97,38 +109,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get version from _version.py
-        id: version
-        run: |
-          VERSION=$(python -c "exec(open('src/guro/_version.py').read()); print(__version__)")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Generate release notes
-        id: notes
-        run: |
-          TAG_NAME="v${{ steps.version.outputs.version }}"
-          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+      - name: Prepare curated release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/prepare_release.py --tag "$RELEASE_TAG" --output release-notes.md
 
-          # Generate release notes from git log since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
-          else
-            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges -20)
-          fi
+      - name: Retrieve release distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
 
-          cat > RELEASE_NOTES.md <<EOF
-          ## What's Changed
-
-          $COMMITS
-
-          **Full Changelog**: https://github.com/dhanushk-offl/guro/compare/${LAST_TAG}...${TAG_NAME}
-          EOF
-
-      - name: Update release with notes
+      - name: Publish GitHub release with curated notes
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.notes.outputs.tag }}
-          body_path: RELEASE_NOTES.md
+          tag_name: ${{ github.ref_name }}
+          name: Guro ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: dist/*
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

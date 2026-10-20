@@ -1,54 +1,75 @@
 # Guro Release Notes 🚀
 
-## Unreleased — Telemetry accuracy and benchmark reliability
+## v1.1.7 — Trustworthy telemetry, bounded benchmarks, and diagnostics
 
-### Added
+Released October 21, 2026. Requires Python 3.9 or later.
 
-- `guro doctor` reports sensor availability, vendor tools, connection permissions, and GPU workload support.
-- `--format json|jsonl` and `--output PATH` provide structured snapshots and streaming monitoring exports.
-- Benchmark reports include CPU matrix throughput, memory copy bandwidth, actual elapsed time, configuration, thermal coverage, and explicit outcomes.
+This release improves measurement accuracy, makes benchmark outcomes explicit, and adds structured output for automation. It also reduces monitoring overhead and fixes dependency scanning and security-workflow startup failures.
 
-### Fixed and improved
+### New diagnostics and automation
 
-- Updates Scorecard to pinned v2.5.0 using GHCR, removes shell retry steps incompatible with publishing, and updates its SARIF uploader to CodeQL v4.
+- **`guro doctor`** reports available vendor tools, detected GPUs, temperature sensor availability, TCP inspection permissions, and GPU workload support without changing the host.
+- **JSON and JSONL output** is available for system monitoring, thermal monitoring, network views, GPU snapshots, diagnostics, and benchmark reports. Use `--format json` or `--format jsonl` and optionally `--output PATH`.
+- **Streaming exports** write and flush each sample instead of keeping an entire session in memory. CSV export remains available with `--export`; recent export history is bounded to 60 samples.
+- Structured monitoring output includes timestamps. Temperature readings include value, unit, source, acquisition timestamp, and availability; unavailable values are `null`.
 
-- Missing temperatures display as `N/A`; optional `heatmap --estimates` readings are labeled and never override measurements or drive benchmark stops.
-- The heatmap uses uniform component readings rather than generated spatial noise. Sampling never invokes sudo.
-- GPU parsing handles quoted PCI output, structured AMD data, stable PCI identities, and unavailable values.
-- CPU sampling uses one process scan without an artificial sleep. Network views share one TCP snapshot and resolve each PID once per sample.
-- Monotonic deadlines account for collection time. Interface changes refresh network history, and CSV exports flush samples without retaining the full session.
-- Benchmarks reuse bounded buffers and stop on measured thermal limits or memory pressure. Full CPU utilization alone does not abort a run.
-- CLI failures return nonzero statuses. Conflicting benchmark modes and invalid sampling arguments are rejected.
-- Package metadata and dependencies are centralized in `pyproject.toml`; CI adds newer Python versions, Windows/macOS jobs, and installed-wheel smoke checks.
+### Accurate thermal and GPU readings
 
-### Compatibility and limitations
+- Missing temperature sensors display `N/A`. Real readings always take precedence over estimates, even when the measurement is lower.
+- `guro heatmap --estimates` explicitly enables labeled, utilization-based estimates for missing readings. Estimates are excluded from benchmark stop decisions.
+- The thermal view is a component schematic with uniform component values. Generated spatial noise has been removed.
+- Linux reads hwmon sensors through psutil; Windows uses OpenHardwareMonitor WMI; macOS attempts powermetrics with existing permissions. Sampling never invokes sudo or prompts for credentials.
+- NVIDIA fallback readings retain their acquisition timestamp while cached. AMD parsing uses structured ROCm output, PCI discovery handles quoted fields, and GPU identities use PCI addresses where available.
+- Unknown GPU utilization and missing CPU-frequency APIs display `N/A`, including on Apple Silicon. Unknown network link speeds no longer crash adapter views.
 
-- Python 3.9+ is required to match the existing Pygments 2.20 security minimum.
-- GPU workloads remain unsupported. `benchmark --gpu-only` reports that outcome with a nonzero status; `guro gpu` continues to expose available telemetry.
-- Thermal protection depends on exposed sensors. The heatmap is a component schematic, and the memory workload measures cached copy throughput rather than peak DRAM bandwidth.
+### Bounded CPU and memory benchmarks
 
-### Integration with v1.1.7
+- CPU tests report deterministic 256-by-256 NumPy/BLAS matrix throughput, iteration count, and GFLOP/s, with computation time measured separately from telemetry overhead.
+- Memory tests reuse pre-touched source/destination buffers and report payload copy MB/s. Both buffers together are capped at 32 MiB and 1% of available memory.
+- Runs stop at 90% system memory use or a measured component temperature of 90 Celsius. Full CPU utilization alone does not stop the workload.
+- Reports include requested and actual duration, configuration, thermal coverage, NumPy information, BLAS thread environment settings, and explicit outcomes: completed, aborted, cancelled, failed, or unsupported.
+- `mini` and `god` request total budgets of 30 and 60 seconds. Default runs split time between CPU and memory; `--cpu-only` uses the CPU budget without a memory phase.
+- GPU workload execution remains unsupported. `--gpu-only` returns an explicit unsupported outcome and a nonzero exit status; `guro gpu` continues to provide available device telemetry.
 
-- Retains master's version metadata, CodeQL/Scorecard retries, compact block charts, missing link-speed handling, and version consistency tests.
-- Initialization spinners finish before live views begin and are disabled for structured output; heatmap estimate options survive initialization.
-- Missing or unsupported CPU-frequency APIs display `N/A`, including Apple Silicon; CLI tests support Click 8.1 stream separation on Python 3.9.
-- Invalid output-option combinations return usage status 2. Sensor tests isolate host NVIDIA tools, and CI verifies wheel dependencies in a fresh environment.
-- Follows master's removal of `setup.py`; builds use `pyproject.toml` directly.
-- The bounded benchmark replaces the previous external-load watchdog. Total memory pressure still aborts a run, while full CPU utilization alone does not.
+### Monitoring performance and interface fixes
 
-### Snyk dependency installation
+- Process CPU deltas persist across cycles, eliminating the artificial 50 ms sleep and second process scan.
+- Network state counts and connection rows share one TCP snapshot. Each PID is resolved once per snapshot, and interface state/history refreshes as adapters change.
+- Monotonic deadlines account for collection overhead and skip missed ticks. Network history is labeled in samples rather than assuming one sample per second.
+- Compact block charts are retained. Initialization spinners finish before live dashboards begin and are absent from structured output.
+- Command failures return nonzero exit codes; invalid output-option combinations return usage status 2. Connection permission failures are distinguished from an empty connection list.
 
-- Replaces local project references in all three requirements files with complete public dependency lists generated from `pyproject.toml`.
-- Configures Snyk SCM scans for Python 3.12 and marks AMD bindings as Linux-only; no security findings are ignored.
-- Adds manifest drift checks and clean standalone-manifest installation jobs to CI.
+### Packaging, dependency scanning, and CI
 
-### Validation
+- Package metadata and dependency declarations live in `pyproject.toml`; the duplicate `setup.py` metadata has been removed.
+- The three requirements manifests contain self-contained public dependency lists generated by `python scripts/sync_requirements.py`. CI rejects drift with `--check` and installs each manifest independently in a clean environment.
+- This fixes Snyk SCM installation failures caused by local-project references (`.`, `.[amd]`, `.[test]`). `.snyk` selects Python 3.12 for scanning; Windows WMI and Linux AMD dependencies retain platform markers. No security findings are ignored.
+- CI covers Python 3.9–3.14 on Linux and Python 3.12 on Windows/macOS, including distribution builds and wheel installation with dependencies in fresh virtual environments.
+- Scorecard is pinned to v2.5.0 and uses GHCR, replacing the GCR image that failed before startup. Its conditional retry uses approved action steps; a failed second attempt fails the job. SARIF uploads use CodeQL v4.
+- The release workflow starts from a `v*` tag push, validates the tag against the package version and curated notes before publishing, and retains those notes in the GitHub release.
 
-- 153 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
-- Windows/macOS CI jobs are configured; real hardware coverage for those platforms remains to be established.
-- Local measurements and methodology are recorded in [the performance review](docs/PERFORMANCE_REVIEW.md).
+### Upgrade and compatibility notes
 
-## v1.2.0 — Network Intelligence
+```bash
+pip install --upgrade guro==1.1.7
+# Or, for a pipx installation:
+pipx upgrade guro
+```
+
+- **Python minimum:** 3.9, matching the Pygments 2.20 security floor. Python 3.8 installations must upgrade their interpreter.
+- **Output files:** an existing `--output` destination is replaced. JSON monitoring writes an array; JSONL writes one sample per line and is preferable for recovery after abrupt termination.
+- **Requirements files:** these install dependencies only. Use `pip install .` to install Guro, or `pip install -e ".[test]"` for development.
+- **Measurement limits:** thermal protection depends on exposed sensors, and individual operations/sensor queries are not preempted. Memory results describe cached copy throughput, not peak DRAM or VRAM bandwidth. GPU adapter hot-plug discovery requires restarting system monitoring.
+
+### Validation and measured overhead
+
+- Automated checks cover measurement precedence, unavailable sensors, GPU parsing, bounded workloads, cancellation, usage errors, stream separation, streaming exports, dependency manifests, and release metadata.
+- CI and clean installation checks passed across the supported Python matrix and Windows/macOS jobs; Snyk and CodeQL checks passed for the implementation. Physical GPU/driver coverage remains dependent on available hardware.
+- Local Linux/Python 3.14 measurements reduced median process-table collection/render time from **51.860 ms to 0.472 ms**, and peak traced Python allocations for 20,000 export rows from **5,717,154 bytes to 270,094 bytes**. These are collector measurements, not hardware performance scores; see [methodology and limits](https://github.com/dhanushk-offl/guro/blob/v1.1.7/docs/PERFORMANCE_REVIEW.md).
+
+**Full changelog:** https://github.com/dhanushk-offl/guro/compare/v1.1.6...v1.1.7
+
+## Historical draft — Network Intelligence (previously labeled v1.2.0)
 *June 15, 2026*
 
 **New** — Real-time network monitoring with bandwidth sparklines, TCP state analysis, process-level connection tracking, and protocol statistics. Zero additional dependencies.
