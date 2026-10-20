@@ -10,6 +10,8 @@
 
 ### Fixed and improved
 
+- Updates Scorecard to pinned v2.5.0 using GHCR, removes shell retry steps incompatible with publishing, and updates its SARIF uploader to CodeQL v4.
+
 - Missing temperatures display as `N/A`; optional `heatmap --estimates` readings are labeled and never override measurements or drive benchmark stops.
 - The heatmap uses uniform component readings rather than generated spatial noise. Sampling never invokes sudo.
 - GPU parsing handles quoted PCI output, structured AMD data, stable PCI identities, and unavailable values.

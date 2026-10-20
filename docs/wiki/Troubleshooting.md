@@ -41,3 +41,11 @@ The requirements files previously referenced the local project using `.`, `.[amd
 The root `.snyk` file explicitly selects Python 3.12 rather than relying on organization defaults. This is compatible with Guro's Python minimum and provides prebuilt AMD binding wheels. AMD packages remain Linux-only; Windows WMI dependencies are skipped on Linux. This removes the local-project installation dependency and avoids building Guro during a requirements scan.
 
 If installation still fails, inspect the first failing package and installer error in Snyk. Missing wheels, compiler/system headers, registry access, and incompatible interpreter settings can also produce this generic code. Reproduce with Python 3.12 in a fresh environment using `pip install -r <manifest>` followed by `pip check`.
+
+## Scorecard fails while pulling its container
+
+An error pulling `gcr.io/openssf/scorecard-action:v2.3.1` that says billing must be enabled originates from the upstream image registry. The runner fails before any analysis steps start, so workflow-level analysis retries cannot recover it. No change to Guro's cloud billing or GitHub token permissions is required for this failure.
+
+The workflow now pins Scorecard action v2.5.0, whose [action metadata](https://github.com/ossf/scorecard-action/blob/fa7117db83c52d787ae5a89f350999701505d78e/action.yaml) uses `ghcr.io/ossf/scorecard-action:v2.5.0`. Both analysis attempts use the same pinned release. A failed first attempt may retry; a failed second attempt fails the job.
+
+Scorecard publishing [restricts the job to approved actions](https://github.com/ossf/scorecard-action/tree/v2.5.0#workflow-restrictions). Keep retries within action steps: shell-based sleep and final-failure steps violate that publishing contract. SARIF uploads use CodeQL action v4, matching the repository's CodeQL workflow. Full hosted analysis and publishing are verified when this workflow runs on master.
