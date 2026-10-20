@@ -31,3 +31,13 @@ CSV exports use `--export`; structured exports use `--format`. Both support `--o
 ## Installation compatibility
 
 Python 3.9 or later is required. The minimum follows the Pygments 2.20 security requirement. Install development dependencies with `pip install -e ".[test]"` and use the package's `pyproject.toml` as the dependency source.
+
+## Snyk SNYK-OS-PYTHON-0009
+
+This error means dependency installation failed before a vulnerability scan could complete. It does not identify a specific vulnerable package. See [Snyk's error catalog](https://docs.snyk.io/scan-fix-and-prevent/prevent/error-catalog#snyk-os-python-0009).
+
+The requirements files previously referenced the local project using `.`, `.[amd]`, and `.[test]`. These are valid local pip inputs, but Snyk's SCM scanner [does not support relative project paths or nested requirements](https://docs.snyk.io/supported-languages/supported-languages-list/python/scm-integrations-and-python#scm-repositories-and-pip). Each manifest now contains its complete public dependency list, generated from `pyproject.toml`. Run `python scripts/sync_requirements.py --check` to detect drift.
+
+The root `.snyk` file explicitly selects Python 3.12 rather than relying on organization defaults. This is compatible with Guro's Python minimum and provides prebuilt AMD binding wheels. AMD packages remain Linux-only; Windows WMI dependencies are skipped on Linux. This removes the local-project installation dependency and avoids building Guro during a requirements scan.
+
+If installation still fails, inspect the first failing package and installer error in Snyk. Missing wheels, compiler/system headers, registry access, and incompatible interpreter settings can also produce this generic code. Reproduce with Python 3.12 in a fresh environment using `pip install -r <manifest>` followed by `pip check`.

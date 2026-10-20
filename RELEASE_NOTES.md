@@ -34,9 +34,15 @@
 - Follows master's removal of `setup.py`; builds use `pyproject.toml` directly.
 - The bounded benchmark replaces the previous external-load watchdog. Total memory pressure still aborts a run, while full CPU utilization alone does not.
 
+### Snyk dependency installation
+
+- Replaces local project references in all three requirements files with complete public dependency lists generated from `pyproject.toml`.
+- Configures Snyk SCM scans for Python 3.12 and marks AMD bindings as Linux-only; no security findings are ignored.
+- Adds manifest drift checks and clean standalone-manifest installation jobs to CI.
+
 ### Validation
 
-- 148 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
+- 153 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
 - Windows/macOS CI jobs are configured; real hardware coverage for those platforms remains to be established.
 - Local measurements and methodology are recorded in [the performance review](docs/PERFORMANCE_REVIEW.md).
 

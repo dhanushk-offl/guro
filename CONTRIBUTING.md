@@ -23,6 +23,19 @@ Use Python 3.9 or later. Package metadata and dependency groups live in `pyproje
    pip install -e ".[test]"
    ```
 
+## Dependency manifests and Snyk
+
+Edit dependency declarations in `pyproject.toml`, then run:
+
+```bash
+python scripts/sync_requirements.py
+python scripts/sync_requirements.py --check
+```
+
+The three requirements files are generated, self-contained dependency lists for pip and Snyk SCM scans. Snyk's repository scanner does not support local project references (`.`, `.[test]`, `.[amd]`) or nested `-r` includes. Do not replace the generated package entries with those shortcuts. Installing a requirements file installs dependencies only; use `pip install -e ".[test]"` to install Guro for development.
+
+The root `.snyk` config selects Python 3.12 for scanning and does not ignore findings. CI rejects manifest drift and installs each standalone file in a clean Linux/Python 3.12 environment. Keep platform markers on Windows-only and Linux-only dependencies.
+
 ## Architectural Guidelines
 
 - **Statelessness**: Core logic (monitoring, benchmarking) should remain decoupled from the CLI interface where possible.

@@ -58,18 +58,19 @@ nvidia = [
     "nvidia-ml-py>=11.515.0"
 ]
 amd = [
-    "pyamdgpuinfo>=2.1.0"
+    "pyamdgpuinfo>=2.1.0; sys_platform == 'linux'"
 ]
 test = [
     "pytest>=7.0.0",
     "pytest-mock>=3.10.0",
     "pytest-cov>=4.0.0",
-    "pytest-timeout>=2.1.0"
+    "pytest-timeout>=2.1.0",
+    "tomli>=2.0.1; python_version < '3.11'"
 ]
 all = [
     "py3nvml>=0.2.7",
     "nvidia-ml-py>=11.515.0",
-    "pyamdgpuinfo>=2.1.0",
+    "pyamdgpuinfo>=2.1.0; sys_platform == 'linux'",
     "matplotlib>=3.5.0",
     "plotly>=5.5.0"
 ]

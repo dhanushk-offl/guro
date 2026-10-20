@@ -1,0 +1,5 @@
+# Dependency scanning uses a supported interpreter with prebuilt AMD wheels.
+# This sets scan configuration only; no vulnerabilities are ignored.
+version: v1.25.0
+language-settings:
+  python: '3.12'
