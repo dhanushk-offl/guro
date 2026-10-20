@@ -1,30 +1,13 @@
-# Benchmarking Protocols
+# CPU and memory benchmarking
 
-The benchmarking module in Guro is designed to assess system stability and performance under controlled stress conditions.
+The mini and god presets request total elapsed budgets of 30 and 60 seconds. Default runs split the budget between CPU and memory; CPU-only uses the complete budget for matrix multiplication. Actual elapsed time is reported separately, since collection and an in-progress operation can exceed the deadline.
 
-## Methodology
+CPU work repeatedly multiplies a deterministic 256 by 256 float64 matrix by its transpose into a reusable output buffer. Reports include iteration count and GFLOP/s, computed using 2N³ operations per multiply and time spent in the multiplication calls. NumPy/BLAS settings determine thread usage and influence results. The report records NumPy version and common BLAS thread environment variables.
 
-Guro implements a tiered benchmarking approach, allowing for varying levels of resource intensity.
+Memory work copies a pre-touched buffer to a reusable destination. Both buffers together are limited to 32 MiB and 1% of currently available memory. Allocation is rejected at 90% system memory usage or when the budget is too small. Payload bytes copied divided by time spent in copy calls gives decimal MB/s. This is a cached memory copy microbenchmark; it is not a claim of peak DRAM bandwidth or VRAM performance.
 
-### 1. Mini-Benchmark
-- **Duration**: 30 seconds.
-- **Scope**: Targeted stress test of the primary CPU cores and discovered discrete graphics units.
-- **Objective**: Rapid verification of system stability and basic performance indexing.
+Safety checks run between operations, at most four times per second. A measured component temperature at or above 90 Celsius or memory usage at or above 90% aborts the run with a reason. High CPU utilization alone does not abort. Sensor coverage is recorded; unavailable sensors provide no thermal protection. Individual operations and external sensor queries are not preempted.
 
-### 2. God-Mode Benchmark
-- **Duration**: 60 seconds.
-- **Scope**: Comprehensive saturation of all available system resources (CPU threads, maximum VRAM allocation, and peak GPU core clock stimulation).
-- **Objective**: Full-scale performance analysis and thermal stability validation.
+GPU workload execution is unsupported. GPU-only requests return an explicit unsupported result immediately; default runs report that limitation alongside CPU and memory results. Use the GPU command for telemetry.
 
-## Resource Safety Engine
-
-To prevent hardware damage, the benchmark engine includes a real-time safety monitor:
-- **Throttling Detection**: Monitors for frequency drops indicates thermal throttling.
-- **Safety Exit**: If the system exceeds pre-defined thermal safety thresholds, the benchmark is automatically terminated.
-
-## Reporting Architecture
-
-Upon completion of a benchmark run, Guro generates a technical summary including:
-- **Peak vs. Average Utilization**: Highlights performance consistency.
-- **Thermal Delta**: Measures the temperature increase from idle to peak load.
-- **Memory Bandwidth Analysis**: Reports on VRAM and system RAM throughput efficiency.
+Reports distinguish completed, aborted, cancelled, failed, and unsupported outcomes. CLI aborts, failures, and unsupported GPU requests have nonzero exit statuses. Tests substitute controlled workloads and clocks instead of running full stress tests.

@@ -1,24 +1,21 @@
-import time
-import logging
+"""Bounded CPU and memory workloads with explicit measurement and stop outcomes."""
+import platform
+import os
+from contextlib import nullcontext
+from rich.text import Text
 import threading
-import numpy as np
+import time
 from typing import Dict
 
+import numpy as np
+import psutil
 from rich.console import Console
-from rich.panel import Panel
 from rich.live import Live
+from rich.panel import Panel
 from rich.table import Table
 
-import psutil
-import platform
-
-try:
-    import GPUtil
-    HAS_GPU_STATS = True
-except ImportError:
-    HAS_GPU_STATS = False
-
-logger = logging.getLogger(__name__)
+from .heatmap import SystemHeatmap
+from .monitor import GPUDetector
 
 
 class SafeSystemBenchmark:
@@ -26,375 +23,208 @@ class SafeSystemBenchmark:
         self.console = Console()
         self.results: Dict = {}
         self._stop_event = threading.Event()
-        # Safety thresholds — these are for *monitoring*, not for killing benchmarks
-        self.MAX_CPUSAFE = 98        # 98% CPU is reasonable during a benchmark
-        self.MAX_MEMORY_USAGE = 95    # 95% memory before we worry
-        self.RESOURCE_WARNING_SAMPLES = 3  # sustained readings before we act
-        self.stop_reason: str = ''
+        self.MAX_MEMORY_USAGE = 90
+        self.MAX_TEMPERATURE = 90
+        self.MAX_BUFFER_BYTES = 32 * 1024 * 1024
         self.has_gpu = self._check_gpu()
-        # Reuse a single psutil.Process instance: cpu_percent(interval=None)
-        # compares against the previous call on the same object, so a fresh
-        # instance per sample would always report 0.0.
-        self._proc = psutil.Process()
-        try:
-            self._proc.cpu_percent(interval=None)  # prime the baseline
-        except psutil.Error:
-            self._proc = None
+        self._thermal = SystemHeatmap()
+        self.stop_reason = None
+        self._last_check = float('-inf')
+        self._live = None
+        self.phase = 'idle'
 
     @property
-    def running(self) -> bool:
+    def running(self):
         return not self._stop_event.is_set()
 
     @running.setter
-    def running(self, value: bool):
-        if value:
-            self._stop_event.clear()
-        else:
-            self._stop_event.set()
+    def running(self, value):
+        self._stop_event.clear() if value else self._stop_event.set()
 
-    def _check_gpu(self) -> Dict:
-        """Check if GPU is available and get GPU information"""
-        gpu_info: Dict = {'available': False, 'gpus': []}
+    def _check_gpu(self):
+        return GPUDetector.get_all_gpus()
 
-        if HAS_GPU_STATS:
-            try:
-                gpus = GPUtil.getGPUs()
-                if gpus:
-                    gpu_info['available'] = True
-                    for gpu in gpus:
-                        gpu_info['gpus'].append({
-                            'name': gpu.name,
-                            'memory_total': gpu.memoryTotal,
-                            'driver_version': gpu.driver
-                        })
-            except Exception:
-                logger.exception("Error checking GPU availability")
-        return gpu_info
-
-    def get_system_info(self) -> Dict:
-        """Get basic system information"""
-        info: Dict = {
-            'system': platform.system(),
-            'processor': platform.processor(),
+    def get_system_info(self):
+        return {
+            'system': platform.system(), 'processor': platform.processor(),
             'memory_total': psutil.virtual_memory().total,
             'cpu_cores': psutil.cpu_count(logical=False),
             'cpu_threads': psutil.cpu_count(logical=True),
-            'gpus': self.has_gpu['gpus'] if self.has_gpu['available'] else []
+            'gpus': self.has_gpu['gpus'],
         }
-        return info
 
-    def safe_gpu_test(self, duration: float) -> Dict:
-        """Safe GPU benchmark with controlled load for all GPUs"""
-        if not self.has_gpu['available']:
-            return {'times': [], 'loads': [], 'error': 'No GPU available'}
+    def safe_gpu_test(self, duration):
+        return {'status': 'unsupported', 'error': 'GPU workloads are not implemented; use guro gpu for telemetry.'}
 
-        result: Dict = {'times': [], 'gpu_stats': []}
-        start_time = time.time()
+    def _check_safety(self):
+        memory = psutil.virtual_memory()
+        if memory.percent >= self.MAX_MEMORY_USAGE:
+            self.stop_reason = 'Memory usage reached the configured limit'
+        readings = self._thermal.get_readings()
+        for component, reading in readings.items():
+            if reading.available and reading.source != 'estimate' and reading.value >= self.MAX_TEMPERATURE:
+                self.stop_reason = f'{component} temperature reached {reading.value:.1f} Celsius'
+        self.results['thermal_monitoring'] = {
+            component: reading.to_dict() for component, reading in readings.items()
+        }
+        # Not all devices expose sensors. Report coverage instead of inventing data.
+        if self.stop_reason:
+            self._stop_event.set()
+        return self.running
 
-        try:
-            while time.time() - start_time < duration and not self._stop_event.is_set():
-                if HAS_GPU_STATS:
-                    gpus = GPUtil.getGPUs()
-                    if gpus:
-                        current_stats = []
-                        for gpu in gpus:
-                            current_stats.append({
-                                'load': gpu.load * 100,
-                                'memory_usage': gpu.memoryUsed
-                            })
-
-                        result['times'].append(time.time() - start_time)
-                        result['gpu_stats'].append(current_stats)
-
-                time.sleep(0.1)
-
-        except Exception:
-            logger.exception("Error during GPU benchmark")
-            result['error'] = 'GPU benchmark error'
-
-        return result
-
-    def _external_cpu_percent(self) -> float:
-        """System-wide CPU load excluding this benchmark process's own contribution.
-
-        The benchmark workload legitimately pegs the CPU — that is the point of it.
-        The watchdog must not kill the run it launched, so we only measure load
-        produced by *other* processes. process.cpu_percent() reports % of a single
-        core, so normalize by core count before comparing against system-wide %.
-        """
-        try:
-            system_pct = psutil.cpu_percent(interval=0.5)
-            proc_pct = self._proc.cpu_percent(interval=None) if self._proc else 0.0
-            cores = max(psutil.cpu_count() or 1, 1)
-            own_pct = proc_pct / cores
-            return max(0.0, system_pct - own_pct)
-        except Exception:
-            return psutil.cpu_percent(interval=0.5)
-
-    def _external_memory_percent(self) -> float:
-        """System-wide memory % excluding this benchmark process's own resident memory.
-
-        psutil.virtual_memory().percent is system-wide and counts this process's
-        resident set, so it can trip the watchdog on a healthy run. Derive the
-        external usage from total/available and subtract the benchmark's USS.
-        """
-        try:
-            vm = psutil.virtual_memory()
-            if self._proc is None:
-                return vm.percent
-            own_uss = self._proc.memory_full_info().uss or 0
-            used_external = max(0.0, vm.total - vm.available - own_uss)
-            return (used_external / vm.total * 100.0) if vm.total else 0.0
-        except Exception:
-            return psutil.virtual_memory().percent
+    def _tick(self):
+        now = time.monotonic()
+        if now - self._last_check >= 0.25:
+            self._last_check = now
+            self._check_safety()
+            if self._live:
+                self._live.update(self.generate_status_table())
+        return self.running
 
     def monitor_resources(self):
-        """Monitor system resources in real-time — graceful stop on sustained external danger.
+        while self.running:
+            self._check_safety()
+            self._stop_event.wait(0.25)
 
-        Only stops for *external* load (other processes) sustained over multiple
-        samples. The benchmark's own CPU and memory usage never trips the watchdog.
-        """
-        high_samples = 0
-        while not self._stop_event.is_set():
-            cpu_percent = self._external_cpu_percent()
-            memory_percent = self._external_memory_percent()
+    def safe_cpu_test(self, duration):
+        # Allocation and random generation are excluded from the timed workload.
+        size = 256
+        matrix = np.random.RandomState(0).rand(size, size)
+        target = np.empty_like(matrix)
+        start = time.perf_counter()
+        iterations = 0
+        compute_seconds = 0.0
+        while time.perf_counter() - start < duration and self._tick():
+            operation_start = time.perf_counter()
+            np.dot(matrix, matrix.T, out=target)
+            compute_seconds += time.perf_counter() - operation_start
+            iterations += 1
+        elapsed = time.perf_counter() - start
+        return {
+            'status': 'completed' if self.running else 'aborted',
+            'duration': elapsed, 'iterations': iterations, 'matrix_size': size,
+            'gflops': (iterations * 2 * size ** 3 / max(compute_seconds, 1e-9)) / 1e9,
+            'compute_seconds': compute_seconds,
+            'seed': 0, 'numpy_version': np.__version__,
+        }
 
-            if cpu_percent > self.MAX_CPUSAFE or memory_percent > self.MAX_MEMORY_USAGE:
-                high_samples += 1
-            else:
-                high_samples = 0
-
-            if high_samples >= self.RESOURCE_WARNING_SAMPLES:
-                self._stop_event.set()
-                self.stop_reason = (
-                    f"external CPU {cpu_percent:.1f}% or memory {memory_percent:.1f}% "
-                    "dangerously high over multiple samples"
-                )
-                self.console.print("[red]Warning: System resource usage dangerously high. Stopping benchmark.[/red]")
-                break
-
-    def safe_cpu_test(self, duration: float) -> Dict:
-        """CPU benchmark — continuous matrix multiplication, no sleep dominating the loop"""
-        start_time = time.time()
-        result: Dict = {'times': [], 'loads': []}
-
-        # Warm up cpu_percent counter
-        psutil.cpu_percent(interval=None)
-
-        while time.time() - start_time < duration and not self._stop_event.is_set():
-            # Use larger matrices for a meaningful workload
-            size = 500
-            matrix = np.random.rand(size, size)
-            _ = np.dot(matrix, matrix.T)
-
-            result['times'].append(time.time() - start_time)
-            result['loads'].append(psutil.cpu_percent(interval=None))
-
-        return result
-
-    def safe_memory_test(self, duration: float) -> Dict:
-        """Memory benchmark — allocates and operates on increasingly large buffers"""
-        start_time = time.time()
-        result: Dict = {'times': [], 'usage': [], 'bandwidth_mbps': []}
-        allocated = []
-
+    def safe_memory_test(self, duration):
+        memory = psutil.virtual_memory()
+        # Budget includes both source and destination and is checked before allocation.
+        budget = min(self.MAX_BUFFER_BYTES, int(memory.available * 0.01))
+        if memory.percent >= self.MAX_MEMORY_USAGE or budget < 2 * 1024 * 1024:
+            self.stop_reason = 'Insufficient available memory for the bounded workload'
+            self.running = False
+            return {'status': 'aborted', 'duration': 0, 'bandwidth_mbps': 0}
+        size = budget // 2 // 8
         try:
-            while time.time() - start_time < duration and not self._stop_event.is_set():
-                # Allocate a 10MB chunk and perform copy operations
-                chunk_size = 10 * 1024 * 1024 // 8  # 10MB worth of float64
-                buf = np.zeros(chunk_size, dtype=np.float64)
-                # Memory copy bandwidth test
-                buf_copy = np.copy(buf)
-                allocated.append(buf)
-                allocated.append(buf_copy)
-
-                result['times'].append(time.time() - start_time)
-                mem = psutil.virtual_memory()
-                result['usage'].append(mem.percent)
-
-                # Stop if we're consuming more than 90% of available memory
-                if mem.percent > 90:
-                    break
-
-                time.sleep(0.1)
-
+            source = np.ones(size, dtype=np.float64)
+            target = np.empty_like(source)
+            target.fill(0)
+            start = time.perf_counter()
+            copied = 0
+            iterations = 0
+            copy_seconds = 0.0
+            while time.perf_counter() - start < duration and self._tick():
+                operation_start = time.perf_counter()
+                np.copyto(target, source)
+                copy_seconds += time.perf_counter() - operation_start
+                copied += source.nbytes
+                iterations += 1
+            elapsed = time.perf_counter() - start
+            return {
+                'status': 'completed' if self.running else 'aborted',
+                'duration': elapsed, 'iterations': iterations,
+                'buffer_bytes': source.nbytes + target.nbytes,
+                'bytes_copied': copied,
+                'bandwidth_mbps': copied / max(copy_seconds, 1e-9) / 1e6,
+                'copy_seconds': copy_seconds,
+            }
         except MemoryError:
-            result['memory_error'] = True
-        finally:
-            # Free all allocated memory
-            del allocated
+            self.stop_reason = 'Memory allocation failed'
+            self.running = False
+            return {'status': 'aborted', 'duration': 0, 'bandwidth_mbps': 0}
 
-        return result
-
-    def mini_test(self, gpu_only: bool = False, cpu_only: bool = False):
-        """Run 30-second mini benchmark"""
-        self._stop_event.clear()
-        self.stop_reason = ''
-        duration = 30
-
-        # Start resource monitoring as daemon
-        monitor_thread = threading.Thread(target=self.monitor_resources, daemon=True)
-        monitor_thread.start()
-
+    def _run(self, duration, gpu_only=False, cpu_only=False, display=True):
+        if gpu_only and cpu_only:
+            raise ValueError('Use only one of --gpu-only or --cpu-only')
+        self.running = True
+        self.stop_reason = None
+        self._last_check = float('-inf')
+        self.results = {
+            'system_info': self.get_system_info(), 'requested_duration': duration,
+            'configuration': {'memory_budget_bytes': self.MAX_BUFFER_BYTES,
+                              'max_memory_percent': self.MAX_MEMORY_USAGE,
+                              'max_temperature_celsius': self.MAX_TEMPERATURE,
+                              'blas_thread_environment': {key: os.environ.get(key) for key in
+                                  ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS')}},
+            'status': 'running',
+        }
+        start = time.monotonic()
         try:
-            with Live(self.generate_status_table(), refresh_per_second=4) as live:
-                self.results = {
-                    'system_info': self.get_system_info(),
-                    'duration': duration
-                }
-
-                if not gpu_only:
-                    # CPU Test — half duration
-                    self.results['cpu'] = self.safe_cpu_test(duration / 2)
-                    # Memory Test — half duration
-                    self.results['memory'] = self.safe_memory_test(duration / 2)
-
-                if not cpu_only and self.has_gpu['available']:
-                    # GPU Test
-                    self.results['gpu'] = self.safe_gpu_test(duration / 2)
-
-                live.update(self.generate_status_table())
+            if gpu_only:
+                self.results['gpu'] = self.safe_gpu_test(duration)
+                self.results['status'] = 'unsupported'
+            else:
+                # Both phases share one total duration. GPU observation adds no time.
+                with (Live(self.generate_status_table(), refresh_per_second=4) if display else nullcontext()) as live:
+                    self._live = live if display else None
+                    self._check_safety()
+                    self._last_check = time.monotonic()
+                    if self.running:
+                        self.phase = 'cpu'
+                        cpu_budget = duration if cpu_only else duration / 2
+                        self.results['cpu'] = self.safe_cpu_test(max(0, cpu_budget - (time.monotonic() - start)))
+                    if self.running and not cpu_only:
+                        self.phase = 'memory'
+                        remaining = max(0, duration - (time.monotonic() - start))
+                        self.results['memory'] = self.safe_memory_test(remaining)
+                    if not cpu_only:
+                        self.results['gpu'] = self.safe_gpu_test(0)
+                self.results['status'] = 'completed' if self.running else 'aborted'
+        except KeyboardInterrupt:
+            self.results['status'] = 'cancelled'
+            self.stop_reason = 'Interrupted by user'
+            raise
+        except Exception:
+            self.results['status'] = 'failed'
+            raise
         finally:
-            self._stop_event.set()
-            monitor_thread.join(timeout=2)
+            self._live = None
+            self.running = False
+            self.phase = 'idle'
+            self.results['duration'] = time.monotonic() - start
+            self.results['stop_reason'] = self.stop_reason
+        if display:
+            self.display_results('Benchmark')
+        return self.results
 
-        if self.stop_reason:
-            self.console.print(f"[red]Benchmark stopped early: {self.stop_reason}[/red]")
-        self.display_results("Mini-Test")
+    def mini_test(self, gpu_only=False, cpu_only=False, display=True):
+        return self._run(30, gpu_only, cpu_only, display)
 
-    def god_test(self, gpu_only: bool = False, cpu_only: bool = False):
-        """Running GOD-LEVEL comprehensive benchmark"""
-        self._stop_event.clear()
-        self.stop_reason = ''
-        duration = 60
+    def god_test(self, gpu_only=False, cpu_only=False, display=True):
+        return self._run(60, gpu_only, cpu_only, display)
 
-        # Start resource monitoring as daemon
-        monitor_thread = threading.Thread(target=self.monitor_resources, daemon=True)
-        monitor_thread.start()
-
-        try:
-            with Live(self.generate_status_table(), refresh_per_second=4) as live:
-                self.results = {
-                    'system_info': self.get_system_info(),
-                    'duration': duration
-                }
-
-                if not gpu_only:
-                    # Extended CPU Test
-                    self.results['cpu'] = self.safe_cpu_test(duration / 2)
-                    # Extended Memory Test
-                    self.results['memory'] = self.safe_memory_test(duration / 2)
-
-                if not cpu_only and self.has_gpu['available']:
-                    # Extended GPU Test
-                    self.results['gpu'] = self.safe_gpu_test(duration / 2)
-
-                live.update(self.generate_status_table())
-        finally:
-            self._stop_event.set()
-            monitor_thread.join(timeout=2)
-
-        if self.stop_reason:
-            self.console.print(f"[red]Benchmark stopped early: {self.stop_reason}[/red]")
-        self.display_results("God-Test")
-
-    def generate_status_table(self) -> Table:
-        """Generate real-time status table"""
-        table = Table(title="Benchmark Status")
-        table.add_column("Metric")
-        table.add_column("Value")
-
-        cpu_percent = psutil.cpu_percent()
-        memory_percent = psutil.virtual_memory().percent
-
-        table.add_row("CPU Usage", f"{cpu_percent}%")
-        table.add_row("Memory Usage", f"{memory_percent}%")
-
-        if self.has_gpu['available'] and HAS_GPU_STATS:
-            try:
-                gpus = GPUtil.getGPUs()
-                if gpus:
-                    for i, gpu in enumerate(gpus):
-                        table.add_row(f"GPU {i}", f"[green]{gpu.name}[/green]")
-                        table.add_row(f"GPU {i} Usage", f"{gpu.load * 100:.1f}%")
-                        table.add_row(f"GPU {i} Memory", f"{gpu.memoryUsed} MB / {gpu.memoryTotal} MB")
-                        if i < len(gpus) - 1:
-                            table.add_section()
-            except Exception:
-                table.add_row("GPU", "[yellow]Error reading GPU stats[/yellow]")
-        else:
-            table.add_row("GPU", "[yellow]GPU not found in your device[/yellow]")
-
-        table.add_row("Status", "[green]Running[/green]" if not self._stop_event.is_set() else "[red]Stopped[/red]")
-
+    def generate_status_table(self):
+        table = Table(title='Benchmark Status')
+        table.add_column('Metric')
+        table.add_column('Value')
+        table.add_row('Phase', self.phase)
+        table.add_row('Memory usage', f'{psutil.virtual_memory().percent:.1f}%')
+        table.add_row('Status', self.stop_reason or self.results.get('status', 'idle'))
         return table
 
-    def display_results(self, test_type: str):
-        """Display benchmark results"""
-        if not self.results:
-            return
-
-        result_text = f"[bold cyan]{test_type} Results[/bold cyan]\n\n"
-
-        # System Information
-        result_text += "[green]System Information:[/green]\n"
-        sys_info = self.results.get('system_info', {})
-        result_text += f"• System: {sys_info.get('system', 'N/A')}\n"
-        result_text += f"• Processor: {sys_info.get('processor', 'N/A')}\n"
-        result_text += f"• CPU Cores: {sys_info.get('cpu_cores', 'N/A')}\n"
-        result_text += f"• CPU Threads: {sys_info.get('cpu_threads', 'N/A')}\n"
-
-        # GPU Information
-        gpus = self.has_gpu.get('gpus', [])
-        if gpus:
-            result_text += f"• GPU Count: {len(gpus)}\n"
-            for i, gpu in enumerate(gpus):
-                result_text += f"  - GPU {i}: {gpu.get('name', 'N/A')}\n"
-                result_text += f"    Memory Total: {gpu.get('memory_total', 'N/A')} MB\n"
-                result_text += f"    Driver: {gpu.get('driver_version', 'N/A')}\n"
-        else:
-            result_text += "• GPU: [yellow]GPU not found in your device[/yellow]\n"
-
-        result_text += "\n[green]Performance Results:[/green]\n"
-
-        # CPU Results
-        if 'cpu' in self.results:
-            cpu_loads = self.results['cpu'].get('loads', [])
-            if cpu_loads:
-                result_text += f"• Average CPU Load: {np.mean(cpu_loads):.2f}%\n"
-                result_text += f"• Peak CPU Load: {max(cpu_loads):.2f}%\n"
-
-        # Memory Results
-        if 'memory' in self.results:
-            memory_usage = self.results['memory'].get('usage', [])
-            if memory_usage:
-                result_text += f"• Average Memory Usage: {np.mean(memory_usage):.2f}%\n"
-                result_text += f"• Peak Memory Usage: {max(memory_usage):.2f}%\n"
-
-        # GPU Results
-        if 'gpu' in self.results and 'error' not in self.results['gpu']:
-            gpu_stats_list = self.results['gpu'].get('gpu_stats', [])
-            if gpu_stats_list:
-                num_gpus = max(len(sample) for sample in gpu_stats_list)
-                for i in range(num_gpus):
-                    gpu_loads = [stats[i]['load'] for stats in gpu_stats_list if i < len(stats)]
-                    gpu_mems = [stats[i]['memory_usage'] for stats in gpu_stats_list if i < len(stats)]
-
-                    if not gpu_loads:
-                        continue
-                    result_text += f"• GPU {i} Results:\n"
-                    result_text += f"  - Average Load: {np.mean(gpu_loads):.2f}%\n"
-                    result_text += f"  - Peak Load: {max(gpu_loads):.2f}%\n"
-                    result_text += f"  - Average Memory: {np.mean(gpu_mems):.2f} MB\n"
-                    result_text += f"  - Peak Memory: {max(gpu_mems):.2f} MB\n"
-
-        result_text += f"• Test Duration: {self.results.get('duration', 'N/A')} seconds\n"
-
+    def display_results(self, test_type):
+        lines = [f"Status: {self.results['status']}", f"Elapsed: {self.results['duration']:.2f} seconds"]
         if self.stop_reason:
-            result_text += f"• [red]Stopped early: {self.stop_reason}[/red]\n"
-
-        self.console.print(Panel(
-            result_text,
-            title=f"System Benchmark Report - {test_type}",
-            border_style="blue"
-        ))
+            lines.append(self.stop_reason)
+        if 'cpu' in self.results:
+            lines.append(f"CPU: {self.results['cpu'].get('gflops', 0):.2f} GFLOP/s (NumPy/BLAS)")
+        if 'memory' in self.results:
+            lines.append(f"Memory copy: {self.results['memory']['bandwidth_mbps']:.2f} MB/s")
+        if 'gpu' in self.results:
+            lines.append(self.results['gpu']['error'])
+        coverage = self.results.get('thermal_monitoring', {})
+        monitored = [c for c, r in coverage.items() if r['available']]
+        lines.append('Temperature sensors: ' + (', '.join(monitored) or 'unavailable'))
+        self.console.print(Panel(Text('\n'.join(lines)), title=test_type))

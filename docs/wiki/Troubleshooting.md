@@ -1,42 +1,43 @@
-# Troubleshooting and Diagnostics
+# Troubleshooting and diagnostics
 
-This guide provides technical resolutions for common operational anomalies within the Guro toolkit.
+Run `guro doctor` first. Use `guro doctor --format json --output diagnostics.json` to save available tools, sensors, connection permissions, and GPU workload capabilities for inspection.
 
-## 1. Temperature Data Unavailable
+## Missing temperatures
 
-### Symptom
-Thermal heatmap displays `0.0°C` or `N/A`.
+`N/A` means the component has no valid exposed reading. Linux collection uses psutil/hwmon; Windows requires OpenHardwareMonitor WMI temperature sensors. macOS attempts powermetrics with the existing permissions. NVIDIA temperatures can also come from nvidia-smi. Virtual machines and some hardware do not expose these sensors.
 
-### Resolutions
-- **Windows**: Ensure the terminal is running as **Administrator**. WMI thermal zones are restricted by the OS.
-- **Linux**: Verify that `lm-sensors` is installed and configured. Run `sudo sensors-detect` to discover motherboard sensor chips.
-- **General**: Ensure your hardware exposes thermal data through standard interfaces (ACPI/SMC). Virtual machines often do not expose these sensors.
+Guro never installs drivers or invokes sudo automatically. Check the sensor provider and current access permissions on the host. `guro heatmap --estimates` optionally fills missing readings with labeled estimates; those values cannot substitute for measured temperatures or benchmark thermal protection.
 
-## 2. GPU Not Detected
+## GPU not detected or workload unsupported
 
-### Symptom
-`guro gpu` reports no available devices or falls back to integrated graphics only.
+Check whether nvidia-smi, rocm-smi, or lspci is available in the environment where Guro runs. Windows has a WMI adapter fallback. Adapter discovery may provide a name without utilization, memory, or temperature measurements. There is no native Apple GPU discovery provider.
 
-### Resolutions
-- **NVIDIA**: Ensure `nvidia-smi` is in your system PATH and the latest NVIDIA drivers with NVML support are installed.
-- **AMD**: On Linux, ensure the user has permissions to access `/dev/kfd` and that the ROCm stack is correctly initialized.
-- **Integrated GPUs**: Guro utilizes WMI on Windows and `lspci` on Linux to detect integrated chips. Verify driver installation if the device is missing.
+GPU workload execution is not implemented. `guro benchmark --gpu-only` returns an unsupported outcome with a nonzero status. Use `guro gpu` for telemetry. Restart monitoring after attaching a GPU because hardware adapter discovery is cached at startup.
 
-## 3. TUI Rendering Anomalies
+## Benchmark aborts
 
-### Symptom
-Flickering, layout breakages, or overlapping text.
+Reports include `status`, `stop_reason`, actual elapsed time, and thermal coverage. The default limits stop at 90% system memory use or a measured component temperature of 90 Celsius. CPU utilization reaching 100% alone does not abort a run. An unavailable sensor provides no thermal protection. Throughput depends on the NumPy/BLAS build, threading configuration, cache effects, and other system activity.
 
-### Resolutions
-- **Terminal Compatibility**: Guro requires a modern terminal emulator with UTF-8 support (e.g., Windows Terminal, iTerm2, Alacritty, or VS Code terminal).
-- **Font Rendering**: Ensure your terminal uses a monospace font to prevent ASCII graph distortions.
-- **Resolution**: A minimum terminal width of 80 characters is recommended for the dashboard layout.
+## Permission failures
 
-## 4. Permission Denied Errors
+An empty TCP connection list and denied connection inspection have different statuses in diagnostics and structured output. Host or sandbox policy may also deny interface queries; the command then reports an error with a nonzero exit status. Review the relevant host permissions before changing how the command is launched.
 
-### Symptom
-Exceptions during initialization of the monitoring or benchmarking modules.
+## Terminal layout or automation output
 
-### Resolutions
-- **WMI Errors**: Often resolved by elevating the user context.
-- **Path Issues**: Ensure the installation directory is in your system PATH, especially when using `pip install --user`.
+Use a UTF-8 terminal, a monospace font, and sufficient terminal space for the dashboard. For scripts, select `--format json` or `--format jsonl` to avoid terminal rendering. JSON monitoring writes an array; JSONL writes one sample per line. Use JSONL when a session may be terminated abruptly.
+
+CSV exports use `--export`; structured exports use `--format`. Both support `--output PATH`, replacing an existing destination. Already-written samples are flushed, and handled collection errors close the writer. Fix unwritable paths or insufficient storage before retrying an export.
+
+## Installation compatibility
+
+Python 3.9 or later is required. The minimum follows the Pygments 2.20 security requirement. Install development dependencies with `pip install -e ".[test]"` and use the package's `pyproject.toml` as the dependency source.
+
+## Snyk SNYK-OS-PYTHON-0009
+
+This error means dependency installation failed before a vulnerability scan could complete. It does not identify a specific vulnerable package. See [Snyk's error catalog](https://docs.snyk.io/scan-fix-and-prevent/prevent/error-catalog#snyk-os-python-0009).
+
+The requirements files previously referenced the local project using `.`, `.[amd]`, and `.[test]`. These are valid local pip inputs, but Snyk's SCM scanner [does not support relative project paths or nested requirements](https://docs.snyk.io/supported-languages/supported-languages-list/python/scm-integrations-and-python#scm-repositories-and-pip). Each manifest now contains its complete public dependency list, generated from `pyproject.toml`. Run `python scripts/sync_requirements.py --check` to detect drift.
+
+The root `.snyk` file explicitly selects Python 3.12 rather than relying on organization defaults. This is compatible with Guro's Python minimum and provides prebuilt AMD binding wheels. AMD packages remain Linux-only; Windows WMI dependencies are skipped on Linux. This removes the local-project installation dependency and avoids building Guro during a requirements scan.
+
+If installation still fails, inspect the first failing package and installer error in Snyk. Missing wheels, compiler/system headers, registry access, and incompatible interpreter settings can also produce this generic code. Reproduce with Python 3.12 in a fresh environment using `pip install -r <manifest>` followed by `pip check`.

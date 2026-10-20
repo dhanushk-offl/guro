@@ -4,7 +4,7 @@ The network module provides real-time bandwidth monitoring, TCP state analysis, 
 
 ## Architecture Overview
 
-The `NetworkMonitor` class in `guro.core.network` is built around three concurrent data pipelines:
+The `NetworkMonitor` class in `guro.core.network` is built around one snapshot collector serving three views:
 
 ### 1. Bandwidth Sampling
 - **Source**: `psutil.net_io_counters(pernic=True)` — per-interface byte counters
@@ -17,8 +17,8 @@ The `NetworkMonitor` class in `guro.core.network` is built around three concurre
 - **Retransmission metrics**: On Linux, `/proc/net/snmp` is parsed to extract `RetransSegs/OutSegs` ratio and UDP datagram counts.
 
 ### 3. Connection Tracking
-- **Process mapping**: Each connection is resolved to its owning process via `psutil.Process(pid).name()`, with graceful fallback to `?` on permission errors.
-- **Filtering**: Listening sockets without a remote address and `NONE`-state connections are omitted. The top 10 connections are shown in the dashboard.
+- **Process mapping**: Each unique PID is resolved once per snapshot via `psutil.Process(pid).name()`, with graceful fallback to `?` on permission errors.
+- **Filtering**: Connections with state `NONE` and no remote address are omitted. Listening sockets are retained. The first 10 connections are shown in the dashboard; they are not ranked by bandwidth.
 
 ## Dashboard Layout
 
@@ -31,7 +31,7 @@ The `run_dashboard()` method uses a multi-pane `rich.layout`:
 │  Interface  IP          Link  ↑ Up     ↓ Down │
 │  eth0 [OK]  10.0.0.5   1000M  1.2MB/s  3.4MB/s│
 ├──────────────────────────────────────────────┤
-│  Bandwidth History (last 60s)                │
+│  Bandwidth History (last 60 samples)                │
 │  ↑ eth0  ████▇▇▇▆▆▆▆▅▅▅▄▄▄▃▃▃▂▂▂▁▁▁  1.2 MB/s│
 │  ↓ eth0  ████▇▇▇▆▆▆▆▅▅▅▄▄▄▃▃▃▂▂▂▁▁▁  3.4 MB/s│
 ├──────────────────────┬───────────────────────┤
@@ -54,5 +54,11 @@ The `run_dashboard()` method uses a multi-pane `rich.layout`:
 
 - **Linux**: Full support — `/proc/net/snmp` for protocol stats, `psutil` for everything else.
 - **macOS**: Protocol stats (`/proc/net/snmp`) are Linux-only; the dashboard omits that section. All other features work.
-- **Windows`: Same as macOS — no SNMP parsing, but bandwidth, connections, and interfaces work via psutil.
+- **Windows**: Same as macOS — no SNMP parsing, but bandwidth, connections, and interfaces work via psutil.
 - All platforms: TCP connection inspection may require elevated privileges (sudo/Administrator).
+
+## Snapshot consistency and exports
+
+`collect_sample()` refreshes interface state each cycle, prunes histories for removed adapters, and takes one TCP snapshot for both state aggregation and connection rows. Connection permissions have an explicit status. The Linux protocol counters are cumulative since boot, including the displayed retransmission ratio.
+
+Monotonic time drives bandwidth deltas and sampling deadlines. CSV and JSON/JSONL outputs stream each sample with bounded recent history. Network totals include all selected active interfaces, including virtual and loopback devices, and should not be interpreted as unique internet traffic.

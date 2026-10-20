@@ -1,7 +1,9 @@
+# Generated from pyproject.toml; do not edit dependency versions here.
+# Regenerate with: python scripts/sync_requirements.py
+# Self-contained for Snyk SCM scans: no local paths or -r includes.
 click>=8.0.0
 rich>=12.0.0
 psutil>=5.8.0
-gputil>=1.4.0
 numpy>=1.22.2
-py-cpuinfo>=8.0.0
-pygments>=2.20.0 # not directly required, pinned by Snyk to avoid a vulnerability
+pygments>=2.20.0
+wmi>=1.5.0; sys_platform == 'win32'

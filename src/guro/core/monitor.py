@@ -1,11 +1,15 @@
 import psutil
 import platform
 import datetime
-import os
 import time
 import csv
 import logging
 import subprocess
+import shlex
+import json
+import math
+from collections import deque
+from contextlib import nullcontext
 from typing import Dict, List, Optional
 
 from rich.console import Console
@@ -16,6 +20,7 @@ from rich.live import Live
 from rich import box
 
 from .utils import ASCIIGraph
+from .telemetry import Schedule, SampleWriter, timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +35,8 @@ def _safe_float(val: str) -> Optional[float]:
     if stripped in ('[N/A]', 'N/A', 'NOT AVAILABLE', 'NAN', '-'):
         return None
     try:
-        return float(stripped)
+        value = float(stripped)
+        return value if math.isfinite(value) else None
     except ValueError:
         return None
 
@@ -44,7 +50,7 @@ class GPUDetector:
                 [nvidia_smi,
                  "--query-gpu=gpu_name,memory.total,memory.used,"
                  "memory.free,temperature.gpu,utilization.gpu,"
-                 "fan.speed,power.draw",
+                 "fan.speed,power.draw,pci.bus_id",
                  "--format=csv,noheader,nounits"],
                 universal_newlines=False,
                 timeout=SUBPROCESS_TIMEOUT,
@@ -54,17 +60,18 @@ class GPUDetector:
             for line in lines:
                 if not line.strip():
                     continue
-                parts = [p.strip() for p in line.split(',')]
+                parts = [p.strip() for p in next(csv.reader([line]))]
                 if len(parts) < 8:
                     continue
-                name, total, used, free, temp, util, fan, power = parts
+                name, total, used, free, temp, util, fan, power = parts[:8]
                 gpus.append({
                     'name': name,
+                    'id': parts[8] if len(parts) > 8 else name,
                     'memory_total': _safe_float(total) * (1024**2) if _safe_float(total) is not None else None,
                     'memory_used': _safe_float(used) * (1024**2) if _safe_float(used) is not None else None,
                     'memory_free': _safe_float(free) * (1024**2) if _safe_float(free) is not None else None,
                     'temperature': _safe_float(temp),
-                    'utilization': _safe_float(util) or 0.0,
+                    'utilization': _safe_float(util),
                     'fan_speed': _safe_float(fan),
                     'power_draw': _safe_float(power),
                     'type': 'NVIDIA'
@@ -86,59 +93,32 @@ class GPUDetector:
     @staticmethod
     def get_amd_info() -> List[Dict]:
         try:
-            rocm_smi = "rocm-smi"
             output = subprocess.check_output(
-                [rocm_smi, "--showuse", "--showmeminfo", "--showtemp"],
-                universal_newlines=True,
-                timeout=SUBPROCESS_TIMEOUT,
+                ['rocm-smi', '--showproductname', '--showuse', '--showmeminfo', 'vram',
+                 '--showtemp', '--showbus', '--json'],
+                universal_newlines=True, timeout=SUBPROCESS_TIMEOUT,
+                stderr=subprocess.DEVNULL,
             )
+            cards = json.loads(output)
             gpus = []
-            lines = output.strip().split('\n')
-            current_gpu: Dict = {}
-            for line in lines:
-                if 'GPU' in line and 'Card' in line:
-                    if current_gpu:
-                        gpus.append(current_gpu)
-                    current_gpu = {
-                        'type': 'AMD',
-                        'name': f"AMD GPU {len(gpus)}",
-                        'utilization': 0.0,
-                        'fan_speed': None,
-                        'power_draw': None,
-                    }
-                if 'GPU Memory Use' in line:
-                    try:
-                        used = float(line.split(':')[1].strip().split()[0]) * 1024**2
-                        current_gpu['memory_used'] = used
-                    except (ValueError, IndexError):
-                        pass
-                if 'Total GPU Memory' in line:
-                    try:
-                        total = float(line.split(':')[1].strip().split()[0]) * 1024**2
-                        current_gpu['memory_total'] = total
-                        current_gpu['memory_free'] = total - current_gpu.get('memory_used', 0)
-                    except (ValueError, IndexError):
-                        pass
-                if 'Temperature' in line:
-                    try:
-                        temp = float(line.split(':')[1].strip().split()[0])
-                        current_gpu['temperature'] = temp
-                    except (ValueError, IndexError):
-                        pass
-            if current_gpu:
-                gpus.append(current_gpu)
+            for card, values in cards.items():
+                if not isinstance(values, dict) or not card.startswith('card'):
+                    continue
+                def number(key):
+                    return _safe_float(str(values.get(key, '')))
+                total = number('VRAM Total Memory (B)')
+                used = number('VRAM Total Used Memory (B)')
+                gpus.append({
+                    'id': values.get('PCI Bus', card), 'type': 'AMD',
+                    'name': values.get('Card Series') or values.get('Card Model') or card,
+                    'memory_total': total, 'memory_used': used,
+                    'memory_free': total - used if total is not None and used is not None else None,
+                    'temperature': number('Temperature (Sensor edge) (C)'),
+                    'utilization': number('GPU use (%)'),
+                })
             return gpus
-        except FileNotFoundError:
-            logger.debug("rocm-smi not found, skipping AMD GPU detection")
-            return []
-        except subprocess.TimeoutExpired:
-            logger.warning("rocm-smi timed out")
-            return []
-        except subprocess.CalledProcessError as e:
-            logger.warning("rocm-smi failed with return code %d", e.returncode)
-            return []
-        except Exception:
-            logger.exception("Unexpected error detecting AMD GPUs")
+        except (OSError, subprocess.SubprocessError, ValueError, AttributeError):
+            logger.debug('AMD GPU information unavailable', exc_info=True)
             return []
 
     @staticmethod
@@ -152,7 +132,8 @@ class GPUDetector:
                     name = video.Name
                     gpus.append({
                         'name': name,
-                        'type': 'Integrated',
+                        'id': video.PNPDeviceID,
+                        'type': 'Display adapter',
                         'memory_total': int(video.AdapterRAM) if video.AdapterRAM else None,
                         'utilization': None,
                         'temperature': None
@@ -164,18 +145,18 @@ class GPUDetector:
                     universal_newlines=True,
                     timeout=SUBPROCESS_TIMEOUT,
                 )
-                for line in output.strip().split('\n'):
-                    if 'VGA' in line.upper() or '3D' in line.upper() or 'Display' in line.upper():
-                        # Parse device description from lspci -mm output
-                        parts = line.split('\t')
-                        if len(parts) >= 4:
-                            gpus.append({
-                                'name': parts[-1].strip(),
-                                'type': 'Integrated',
-                                'memory_total': None,
-                                'utilization': None,
-                                'temperature': None
-                            })
+                for line in output.splitlines():
+                    try:
+                        parts = shlex.split(line)
+                    except ValueError:
+                        continue
+                    if len(parts) < 4 or not any(kind in parts[1].upper() for kind in ('VGA', '3D', 'DISPLAY')):
+                        continue
+                    gpus.append({
+                        'id': parts[0], 'name': f'{parts[2]} {parts[3]}',
+                        'type': 'Display adapter', 'memory_total': None,
+                        'utilization': None, 'temperature': None,
+                    })
         except FileNotFoundError:
             logger.debug("lspci not found, skipping integrated GPU detection")
         except subprocess.TimeoutExpired:
@@ -187,7 +168,7 @@ class GPUDetector:
         return gpus
 
     @staticmethod
-    def get_all_gpus() -> Dict:
+    def get_all_gpus(include_adapters=True) -> Dict:
         gpu_info = {
             'available': False,
             'gpus': []
@@ -195,15 +176,21 @@ class GPUDetector:
 
         nvidia_gpus = GPUDetector.get_nvidia_info()
         amd_gpus = GPUDetector.get_amd_info()
-        integrated_gpus = GPUDetector.get_integrated_info()
+        integrated_gpus = GPUDetector.get_integrated_info() if include_adapters else []
 
         all_gpus = nvidia_gpus + amd_gpus
 
-        # Add integrated GPUs only if no dedicated GPUs of the same name exist
-        detected_names = [g.get('name', '') for g in all_gpus if g.get('name')]
-        for ig in integrated_gpus:
-            if ig.get('name', '') not in detected_names:
-                all_gpus.append(ig)
+        # PCI addresses are stable across tools; names are not.
+        def identity(gpu):
+            return str(gpu.get('id') or '').lower()[-7:]
+        detected = {identity(g) for g in all_gpus if g.get('id')}
+        names = {str(g.get('name') or '').casefold() for g in all_gpus}
+        if not all_gpus:
+            all_gpus.extend(integrated_gpus)
+        else:
+            for adapter in integrated_gpus:
+                if identity(adapter) not in detected and str(adapter.get('name') or '').casefold() not in names:
+                    all_gpus.append(adapter)
 
         if all_gpus:
             gpu_info['available'] = True
@@ -217,18 +204,29 @@ class SystemMonitor:
         self.console = Console()
         self.cpu_graph = ASCIIGraph(width=40, height=4)
         self.memory_graph = ASCIIGraph(width=40, height=4)
-        self.monitoring_data: List[Dict] = []
+        self.monitoring_data = deque(maxlen=60)
         # Cache GPU info — subprocess calls are expensive
         self._gpu_info = GPUDetector.get_all_gpus()
-        self._gpu_info_time = time.time()
-        self._gpu_info_ttl = 5.0  # Re-query every 5 seconds
+        self._gpu_info_time = time.monotonic()
+        self._gpu_info_ttl = 5.0  # Re-query metrics every 5 seconds
+        self._adapters = [g for g in self._gpu_info['gpus'] if g.get('type') == 'Display adapter']
+        from .heatmap import SystemHeatmap
+        self._thermal = SystemHeatmap()
+        psutil.cpu_percent()
 
     def _refresh_gpu_info(self) -> Dict:
         """Return cached GPU info if fresh, otherwise re-query."""
-        now = time.time()
+        now = time.monotonic()
         if now - self._gpu_info_time > self._gpu_info_ttl:
             try:
-                self._gpu_info = GPUDetector.get_all_gpus()
+                info = GPUDetector.get_all_gpus(include_adapters=False)
+                ids = {str(g.get('id') or '').lower()[-7:] for g in info['gpus']}
+                names = {str(g.get('name') or '').casefold() for g in info['gpus']}
+                for adapter in self._adapters:
+                    if str(adapter.get('id') or '').lower()[-7:] not in ids and str(adapter.get('name') or '').casefold() not in names:
+                        info['gpus'].append(adapter)
+                info['available'] = bool(info['gpus'])
+                self._gpu_info = info
                 self._gpu_info_time = now
             except Exception:
                 logger.exception("Error refreshing GPU info, using cached data")
@@ -236,23 +234,21 @@ class SystemMonitor:
 
     def _get_cpu_temperature(self) -> Optional[float]:
         if platform.system() == 'Linux':
-            try:
-                temp_file = '/sys/class/thermal/thermal_zone0/temp'
-                if os.path.exists(temp_file):
-                    with open(temp_file, 'r') as f:
-                        return float(f.read()) / 1000.0
-            except (OSError, ValueError):
-                pass
+            return self._thermal.get_linux_temps()['CPU']
         return None
 
     def get_system_info(self) -> Dict:
-        cpu_freq = psutil.cpu_freq()
+        # Some platforms (including Apple Silicon) expose no frequency API.
+        try:
+            cpu_freq = psutil.cpu_freq()
+        except (AttributeError, NotImplementedError, OSError, psutil.Error):
+            cpu_freq = None
         memory = psutil.virtual_memory()
 
         system_info: Dict = {
             'os': f"{platform.system()} {platform.release()}",
             'cpu_model': platform.processor(),
-            'cpu_cores': psutil.cpu_count(),
+            'cpu_cores': psutil.cpu_count(logical=False),
             'cpu_threads': psutil.cpu_count(logical=True),
             'cpu_freq': f"{cpu_freq.current:.2f}MHz" if cpu_freq else "N/A",
             'memory_total': f"{memory.total / (1024**3):.2f}GB",
@@ -284,7 +280,8 @@ class SystemMonitor:
 
         self.console.print(f"[green]Monitoring data exported to '{filepath}'[/green]")
 
-    def run_performance_test(self, interval: float = 1.0, duration: Optional[int] = 30, export_data: bool = False):
+    def run_performance_test(self, interval: float = 1.0, duration: Optional[int] = 30, export_data: bool = False, output_path: Optional[str] = None):
+        schedule = Schedule(interval, duration)
         self.console.clear()
 
         # Initial GPU info (subprocess calls)
@@ -308,30 +305,34 @@ class SystemMonitor:
             Layout(name="gpu_graphs")
         )
 
-        start_time = time.time()
+        path = output_path or f'monitoring_data_{datetime.datetime.now():%Y%m%d_%H%M%S}.csv'
+        with (open(path, 'w', newline='', encoding='utf-8') if export_data else nullcontext()) as stream:
+            writer_context = SampleWriter(stream, 'csv', ['timestamp', 'cpu_usage', 'memory_usage']) if stream else nullcontext()
+            self._run_dashboard(layout, gpu_graphs, schedule, duration, export_data, writer_context)
+        if export_data:
+            self.console.print(f'[green]Monitoring data exported to {path}[/green]')
+
+    def _run_dashboard(self, layout, gpu_graphs, schedule, duration, export_data, writer_context):
         try:
-            with Live(layout, refresh_per_second=4, screen=True):
+            with writer_context as writer, Live(layout, refresh_per_second=4, screen=True):
                 while True:
-                    current_time = time.time()
-                    elapsed = current_time - start_time
-                    if duration and (elapsed >= duration):
+                    elapsed = schedule.elapsed
+                    if schedule.finished:
                         break
 
                     # Update System Stats
-                    cpu_percent = psutil.cpu_percent()
-                    memory = psutil.virtual_memory()
-                    memory_percent = memory.percent
-                    sys_info = self.get_system_info()
+                    sample = self.collect_sample()
+                    cpu_percent = sample['cpu_usage']
+                    memory_percent = sample['memory_usage']
+                    sys_info = sample['system_info']
 
                     self.cpu_graph.add_point(cpu_percent)
                     self.memory_graph.add_point(memory_percent)
 
                     if export_data:
-                        self.monitoring_data.append({
-                            'timestamp': datetime.datetime.now().isoformat(),
-                            'cpu_usage': cpu_percent,
-                            'memory_usage': memory_percent
-                        })
+                        row = {key: sample[key] for key in ('timestamp', 'cpu_usage', 'memory_usage')}
+                        writer.write(row)
+                        self.monitoring_data.append(row)
 
                     # Header
                     header_text = (
@@ -356,7 +357,7 @@ class SystemMonitor:
                     layout["mem_graph"].update(mem_panel)
 
                     # Refresh GPU info from cache
-                    gpu_info = self._refresh_gpu_info()
+                    gpu_info = sample['gpu']
                     # Ensure enough graphs if GPU count changed
                     while len(gpu_graphs) < len(gpu_info.get('gpus', [])):
                         gpu_graphs.append(ASCIIGraph(width=40, height=4))
@@ -372,9 +373,12 @@ class SystemMonitor:
                     if gpu_info['available']:
                         gpu_plots = []
                         for i, (gpu, graph) in enumerate(zip(gpu_info['gpus'], gpu_graphs)):
-                            util = gpu.get('utilization', 0) or 0
-                            graph.add_point(util)
-                            gpu_plots.append(graph.render(f"GPU {i} ({gpu.get('name', 'Unknown')}): {util:.1f}%"))
+                            util = gpu.get('utilization')
+                            if util is not None:
+                                graph.add_point(util)
+                            label = f'{util:.1f}%' if util is not None else 'N/A'
+                            plot = graph.render(f"GPU {i} ({gpu.get('name', 'Unknown')}): {label}")
+                            gpu_plots.append(plot or f"GPU {i}: utilization N/A")
 
                             gpu_details_table.add_row(
                                 f"GPU {i}", "Name",
@@ -382,7 +386,7 @@ class SystemMonitor:
                             )
                             gpu_details_table.add_row(
                                 "", "Temp",
-                                f"{gpu.get('temperature', 'N/A')}°C"
+                                f"{gpu['temperature']:.1f}°C" if gpu.get('temperature') is not None else 'N/A'
                             )
                             if gpu.get('memory_used') is not None and gpu.get('memory_total') is not None:
                                 mem_str = (
@@ -409,7 +413,7 @@ class SystemMonitor:
                     details_layout = Layout()
                     details_layout.split_column(
                         Layout(Panel(gpu_details_table, title="Detailed Stats", border_style="white")),
-                        Layout(Panel(self._get_process_table(), title="Top Processes", border_style="white"))
+                        Layout(Panel(self._get_process_table(sample['processes']), title="Top Processes", border_style="white"))
                     )
                     layout["details"].update(details_layout)
 
@@ -420,60 +424,49 @@ class SystemMonitor:
                         border_style="blue", box=box.SIMPLE
                     ))
 
-                    time.sleep(interval)
+                    schedule.wait()
 
         except KeyboardInterrupt:
             pass
 
         self.console.clear()
         self.console.print("[bold green]Monitoring completed.[/bold green]")
-        if export_data:
-            self.export_monitoring_data()
 
-    def _get_process_table(self) -> Table:
-        """Build a table of top 10 processes by CPU usage.
-        Calls cpu_percent twice with a brief delay for accurate readings."""
-        table = Table(box=box.SIMPLE, expand=True)
-        table.add_column("PID", style="dim")
-        table.add_column("Name")
-        table.add_column("CPU%", justify="right")
-        table.add_column("Mem%", justify="right")
+    def collect_sample(self):
+        """Collect one snapshot independently of terminal rendering or export."""
+        return {
+            'timestamp': timestamp(),
+            'cpu_usage': psutil.cpu_percent(),
+            'memory_usage': psutil.virtual_memory().percent,
+            'system_info': self.get_system_info(),
+            'gpu': self._refresh_gpu_info(),
+            'processes': self._get_processes(),
+        }
 
+    def _get_processes(self):
+        procs = []
         try:
-            # First call seeds the counters — discard results
-            procs = []
-            for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
-                try:
-                    proc.cpu_percent(interval=None)  # Seed
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass
-
-            # Brief sleep for delta accumulation
-            time.sleep(0.05)
-
-            # Second call gets meaningful delta values
             for proc in psutil.process_iter(['pid', 'name', 'memory_percent']):
                 try:
-                    cpu_pct = proc.cpu_percent(interval=None)
-                    mem_pct = proc.info.get('memory_percent', 0.0) or 0.0
                     procs.append({
-                        'pid': proc.info['pid'],
-                        'name': proc.info['name'] or 'N/A',
-                        'cpu_percent': cpu_pct,
-                        'memory_percent': mem_pct,
+                        'pid': proc.info['pid'], 'name': proc.info['name'] or 'N/A',
+                        'cpu_percent': proc.cpu_percent(interval=None),
+                        'memory_percent': proc.info.get('memory_percent', 0.0) or 0.0,
                     })
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass
-
-            procs.sort(key=lambda x: x['cpu_percent'], reverse=True)
-
-            for proc in procs[:10]:
-                table.add_row(
-                    str(proc['pid']),
-                    proc['name'][:15],
-                    f"{proc['cpu_percent']:.1f}",
-                    f"{proc['memory_percent']:.1f}"
-                )
+                    continue
         except Exception:
-            logger.exception("Error collecting process information")
+            logger.exception('Error collecting process information')
+        return sorted(procs, key=lambda p: p['cpu_percent'], reverse=True)[:10]
+
+    def _get_process_table(self, processes=None) -> Table:
+        """Render process deltas collected over the sampling interval."""
+        table = Table(box=box.SIMPLE, expand=True)
+        table.add_column('PID', style='dim')
+        table.add_column('Name')
+        table.add_column('CPU%', justify='right')
+        table.add_column('Mem%', justify='right')
+        for proc in self._get_processes() if processes is None else processes:
+            table.add_row(str(proc['pid']), proc['name'][:15],
+                          f"{proc['cpu_percent']:.1f}", f"{proc['memory_percent']:.1f}")
         return table

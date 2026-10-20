@@ -1,29 +1,17 @@
-# Platform Support and Requirements
+# Platform support
 
-Guro is engineered for broad compatibility across major operating systems. Technical implementations vary by platform to leverage native diagnostic interfaces.
+Python 3.9 or later is required. Runtime dependencies are declared in pyproject.toml; use pipx or a virtual environment for installation.
 
-## Compatibility Matrix
-
-| Operating System | Information Interface | Thermal Acquisition | GPU Support |
+| Platform | System/process monitoring | Temperature acquisition | GPU discovery and metrics |
 | :--- | :--- | :--- | :--- |
-| **Windows** | Win32 API / psutil | WMI (MSAcpi) | NVIDIA (NVML), AMD, Intel |
-| **Linux** | sysfs / procfs | lm-sensors / sysfs | NVIDIA, AMD (ROCm), Intel |
-| **macOS** | Mach / Grand Central | SMC / powermetrics | Apple Silicon, AMD |
+| Linux | psutil | psutil/hwmon; NVIDIA fallback | nvidia-smi, ROCm JSON, lspci adapter fallback |
+| Windows | psutil | OpenHardwareMonitor WMI | nvidia-smi and WMI adapter fallback |
+| macOS | psutil | powermetrics with existing permissions | No native Apple GPU discovery provider |
 
-## Requirements
+Missing tools and sensors are optional: their values remain unavailable. Guro never installs tools or invokes sudo automatically. TCP connection inspection may be denied by the OS and is reported separately from an empty connection list. Linux protocol counters come from /proc/net/snmp; these are unavailable on other systems.
 
-### Python Environment
-- **Version**: Python 3.7+ is mandatory.
-- **Virtualization**: Highly recommended to use `venv` or `pipx` to avoid dependency conflicts.
+Run `guro doctor` for actual capabilities on the current machine. CI covers Linux Python versions and Windows/macOS Python 3.12. Passing mocked provider tests does not establish real-hardware coverage for every driver or GPU model.
 
-### System Permissions
-- **Linux**: Reading thermal data from `sysfs` may require the user to be in the `video` or `hwmon` group, or require `sudo` for certain sensor chips.
-- **Windows**: WMI queries for thermal data often require administrative privileges.
-- **macOS**: `powermetrics` and SMC access require elevated standard permissions.
+Core dependencies are Click, Rich, psutil, NumPy, and a Pygments minimum inherited from the existing requirements. Windows additionally installs WMI. Optional extras remain available for compatibility, but current GPU collection uses vendor commands rather than the optional Python bindings.
 
-## Dependency Management
-
-Guro minimizes its core footprint by separating diagnostic requirements from optional visualization libraries.
-- **Core**: `click`, `rich`, `psutil`, `gputil`, `numpy`, `py-cpuinfo`.
-- **NVIDIA Dedicated**: `nvidia-ml-py`.
-- **AMD Dedicated**: `pyamdgpuinfo` (Linux specific).
+The minimum Python version is 3.9 to match the existing Pygments 2.20 security requirement, which does not support Python 3.8.

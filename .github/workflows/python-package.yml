@@ -6,13 +6,22 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu-latest]
+        include:
+          - os: windows-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.12"
 
     steps:
     - uses: actions/checkout@v4
@@ -25,6 +34,8 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -e ".[test]"
         pip install flake8
+    - name: Check generated dependency manifests
+      run: python scripts/sync_requirements.py --check
     - name: Lint with flake8
       run: |
         flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -32,3 +43,40 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --tb=short -q
+    - name: Build distribution
+      run: |
+        pip install build
+        python -m build
+    - name: Install and smoke-test wheel
+      shell: bash
+      run: |
+        python -m venv "$RUNNER_TEMP/guro-wheel"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          wheel_python="$RUNNER_TEMP/guro-wheel/Scripts/python.exe"
+        else
+          wheel_python="$RUNNER_TEMP/guro-wheel/bin/python"
+        fi
+        "$wheel_python" -m pip install dist/*.whl
+        cd "$RUNNER_TEMP"
+        "$wheel_python" -c 'from guro.cli.main import cli; cli()' --version
+        "$wheel_python" -c 'from guro.cli.main import cli; cli()' doctor --format json
+
+  dependency-manifests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        manifest: [requirements.txt, requirements-linux.txt, test_requirements.txt]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install standalone manifest in a clean environment
+        env:
+          MANIFEST: ${{ matrix.manifest }}
+        run: |
+          python -m venv "$RUNNER_TEMP/guro-manifest"
+          "$RUNNER_TEMP/guro-manifest/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/guro-manifest/bin/python" -m pip install -r "$MANIFEST"
+          "$RUNNER_TEMP/guro-manifest/bin/python" -m pip check
