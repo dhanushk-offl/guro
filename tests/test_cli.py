@@ -62,7 +62,12 @@ def test_network_denied_is_not_empty_success():
 
 def test_unsupported_gpu_workload_is_structured_and_nonzero():
     with patch('guro.core.benchmark.GPUDetector.get_all_gpus', return_value={'available': False, 'gpus': []}):
-        result = CliRunner().invoke(cli, ['benchmark', '--gpu-only', '--format', 'json'])
+        runner = CliRunner()
+        # Click 8.1 merges stderr into stdout by default; Click 8.2+ separates
+        # these streams automatically and removed the constructor option.
+        if hasattr(runner, 'mix_stderr'):
+            runner.mix_stderr = False
+        result = runner.invoke(cli, ['benchmark', '--gpu-only', '--format', 'json'])
     assert result.exit_code == 1
     assert json.loads(result.stdout)['status'] == 'unsupported'
 
@@ -116,3 +121,18 @@ def test_structured_commands_never_start_initialization_spinners(command, constr
     assert result.exit_code == 0, result.output
     json.loads(result.stdout)
     status.assert_not_called()
+
+
+@pytest.mark.parametrize('args', [
+    ['monitor', '--export', '--format', 'json'],
+    ['monitor', '--output', 'unused.csv'],
+    ['network', '--export', '--format', 'json'],
+    ['network', '--output', 'unused.csv'],
+    ['network', '--export', '--interfaces'],
+    ['network', '--export', '--speed'],
+    ['heatmap', '--output', 'unused.json'],
+])
+def test_invalid_output_options_return_usage_error(args):
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 2, result.output
+    assert 'Error:' in result.output

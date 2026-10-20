@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -45,7 +48,13 @@ jobs:
     - name: Install and smoke-test wheel
       shell: bash
       run: |
-        pip install --force-reinstall --no-deps dist/*.whl
+        python -m venv "$RUNNER_TEMP/guro-wheel"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          wheel_python="$RUNNER_TEMP/guro-wheel/Scripts/python.exe"
+        else
+          wheel_python="$RUNNER_TEMP/guro-wheel/bin/python"
+        fi
+        "$wheel_python" -m pip install dist/*.whl
         cd "$RUNNER_TEMP"
-        guro --version
-        guro doctor --format json
+        "$wheel_python" -c 'from guro.cli.main import cli; cli()' --version
+        "$wheel_python" -c 'from guro.cli.main import cli; cli()' doctor --format json

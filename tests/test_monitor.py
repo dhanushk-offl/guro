@@ -44,7 +44,7 @@ class TestSafeFloat:
         assert _safe_float(None) is None  # type: ignore
 
 
-@patch('psutil.cpu_freq')
+@patch('psutil.cpu_freq', create=True)
 @patch('psutil.cpu_count')
 def test_get_system_info(mock_cpu_count, mock_cpu_freq, monitor):
     """Test system information retrieval"""
@@ -244,3 +244,15 @@ def test_monitor_graphs_fit_fixed_dashboard_panels(monitor):
     # Four chart rows + title + Rich panel borders fit the seven-row slots.
     assert monitor.cpu_graph.height == monitor.memory_graph.height == 4
     assert monitor.cpu_graph.width == monitor.memory_graph.width == 40
+
+
+
+def test_system_info_without_cpu_frequency_api(monitor, monkeypatch):
+    monkeypatch.delattr(psutil, 'cpu_freq', raising=False)
+    assert monitor.get_system_info()['cpu_freq'] == 'N/A'
+
+
+@pytest.mark.parametrize('failure', [AttributeError, NotImplementedError, OSError, psutil.AccessDenied])
+def test_unavailable_cpu_frequency_does_not_stop_monitoring(monitor, failure):
+    with patch('psutil.cpu_freq', create=True, side_effect=failure):
+        assert monitor.get_system_info()['cpu_freq'] == 'N/A'

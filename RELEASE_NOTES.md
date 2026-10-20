@@ -29,12 +29,14 @@
 
 - Retains master's version metadata, CodeQL/Scorecard retries, compact block charts, missing link-speed handling, and version consistency tests.
 - Initialization spinners finish before live views begin and are disabled for structured output; heatmap estimate options survive initialization.
+- Missing or unsupported CPU-frequency APIs display `N/A`, including Apple Silicon; CLI tests support Click 8.1 stream separation on Python 3.9.
+- Invalid output-option combinations return usage status 2. Sensor tests isolate host NVIDIA tools, and CI verifies wheel dependencies in a fresh environment.
 - Follows master's removal of `setup.py`; builds use `pyproject.toml` directly.
 - The bounded benchmark replaces the previous external-load watchdog. Total memory pressure still aborts a run, while full CPU utilization alone does not.
 
 ### Validation
 
-- 136 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
+- 148 automated tests passed; static checks, distribution builds, and installed-wheel smoke checks passed locally on Linux/Python 3.14.
 - Windows/macOS CI jobs are configured; real hardware coverage for those platforms remains to be established.
 - Local measurements and methodology are recorded in [the performance review](docs/PERFORMANCE_REVIEW.md).
 

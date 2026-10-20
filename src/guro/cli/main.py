@@ -88,9 +88,9 @@ def monitor(interval: float, duration: Optional[int], export: bool, fmt: str, ou
     """📊 Monitor system resources and performance in real-time"""
     try:
         if export and fmt != 'text':
-            raise ValueError('Use --export for CSV or --format for structured output')
+            raise click.UsageError('Use --export for CSV or --format for structured output')
         if output and fmt == 'text' and not export:
-            raise ValueError('--output requires --export or a structured --format')
+            raise click.UsageError('--output requires --export or a structured --format')
         with (console.status('[bold green]Initializing system monitor...') if fmt == 'text' else nullcontext()):
             mon = SystemMonitor()
         if fmt != 'text':
@@ -106,6 +106,8 @@ def monitor(interval: float, duration: Optional[int], export: bool, fmt: str, ou
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Monitoring stopped by user[/yellow]")
+    except click.ClickException:
+        raise
     except Exception as exc:
         fail('Monitoring', exc)
 
@@ -212,7 +214,7 @@ def heatmap(interval: float, duration: int, estimates: bool, fmt: str, output: O
             }}, interval, duration, fmt, output)
             return
         if output:
-            raise ValueError('--output requires --format json or jsonl')
+            raise click.UsageError('--output requires --format json or jsonl')
 
         updates = hm.run(
             interval=interval,
@@ -223,6 +225,8 @@ def heatmap(interval: float, duration: int, estimates: bool, fmt: str, output: O
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Heatmap visualization stopped by user[/yellow]")
+    except click.ClickException:
+        raise
     except Exception as exc:
         fail('Heatmap', exc)
 
@@ -252,9 +256,9 @@ def network(interfaces: bool, speed: bool, show_connections: bool,
 
     try:
         if export and (fmt != 'text' or any(mode_flags)):
-            raise ValueError('--export is supported by the text dashboard; use --format for other output')
+            raise click.UsageError('--export is supported by the text dashboard; use --format for other output')
         if output and fmt == 'text' and not export:
-            raise ValueError('--output requires --export or a structured --format')
+            raise click.UsageError('--output requires --export or a structured --format')
         net = NetworkMonitor()
         if fmt != 'text':
             if interfaces:
@@ -285,6 +289,8 @@ def network(interfaces: bool, speed: bool, show_connections: bool,
             )
     except KeyboardInterrupt:
         console.print("\n[yellow]Network monitoring stopped by user[/yellow]")
+    except click.ClickException:
+        raise
     except Exception as exc:
         fail('Network monitoring', exc)
 

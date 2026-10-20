@@ -12,14 +12,18 @@ from guro.core.telemetry import Reading, SampleWriter, Schedule
 def test_unavailable_temperatures_stay_missing():
     heatmap = SystemHeatmap()
     heatmap.system = 'unknown'
-    assert all(r.value is None and not r.available for r in heatmap.get_readings().values())
+    with patch('guro.core.heatmap.shutil.which', return_value=None):
+        readings = heatmap.get_readings()
+    assert all(r.value is None and not r.available for r in readings.values())
     assert heatmap.format_temp('CPU', None) == 'N/A'
 
 
 def test_estimates_are_opt_in_and_labeled():
     heatmap = SystemHeatmap(estimates=True)
     heatmap.system = 'unknown'
-    assert all(r.source == 'estimate' for r in heatmap.get_readings().values())
+    with patch('guro.core.heatmap.shutil.which', return_value=None):
+        readings = heatmap.get_readings()
+    assert all(r.source == 'estimate' for r in readings.values())
     assert 'estimated' in heatmap.format_temp('CPU', 40)
 
 

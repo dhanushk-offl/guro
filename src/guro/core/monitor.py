@@ -238,7 +238,11 @@ class SystemMonitor:
         return None
 
     def get_system_info(self) -> Dict:
-        cpu_freq = psutil.cpu_freq()
+        # Some platforms (including Apple Silicon) expose no frequency API.
+        try:
+            cpu_freq = psutil.cpu_freq()
+        except (AttributeError, NotImplementedError, OSError, psutil.Error):
+            cpu_freq = None
         memory = psutil.virtual_memory()
 
         system_info: Dict = {
