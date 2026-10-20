@@ -1,3 +1,11 @@
 include README.md
 include LICENSE
 include SECURITY.md
+include RELEASE_NOTES.md
+include requirements.txt
+include requirements-linux.txt
+include test_requirements.txt
+include pytest.ini
+include scripts/prepare_release.py
+include scripts/sync_requirements.py
+recursive-include tests *.py
