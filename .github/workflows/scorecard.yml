@@ -29,34 +29,25 @@ jobs:
         with:
           persist-credentials: false
 
+      # Publishing only permits approved action steps in this job; do not add
+      # shell-based retry/backoff steps. A failed second attempt fails the job.
       - name: Run OpenSSF Scorecard analysis (attempt 1)
         id: scorecard_analysis_attempt_1
         continue-on-error: true
-        uses: ossf/scorecard-action@v2.3.1
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
-
-      - name: Wait before retry
-        if: steps.scorecard_analysis_attempt_1.outcome == 'failure'
-        run: sleep 15
 
       - name: Run OpenSSF Scorecard analysis (attempt 2)
         id: scorecard_analysis_attempt_2
         if: steps.scorecard_analysis_attempt_1.outcome == 'failure'
-        continue-on-error: true
-        uses: ossf/scorecard-action@v2.3.1
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
-
-      - name: Fail if Scorecard retries did not recover
-        if: steps.scorecard_analysis_attempt_1.outcome == 'failure' && steps.scorecard_analysis_attempt_2.outcome != 'success'
-        run: |
-          echo "OpenSSF Scorecard analysis failed after retry."
-          exit 1
 
       # This was the step failing due to permissions
       - name: Upload SARIF artifact
@@ -67,6 +58,6 @@ jobs:
           retention-days: 5
 
       - name: Upload results to code scanning
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
